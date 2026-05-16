@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400&family=DM+Sans:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --green-deep:    #1A3D2B;
+  --green-mid:     #2D5C3E;
+  --green-soft:    #7EC8A4;
+  --green-pale:    #C8E6D8;
+  --cream:         #F2EFE3;
+  --cream-dark:    #E5E0D0;
+  --surface:       #FFFFFF;
+  --text-primary:  #1A3D2B;
+  --text-secondary:#4A6458;
+  --text-muted:    #8BA898;
+  --danger:        #C0392B;
+  --warning:       #D97706;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'DM Sans', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--cream);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+}
+
+/* iOS safe area support */
+.pt-safe-top {
+  padding-top: env(safe-area-inset-top, 12px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--cream-dark);
+  border-radius: 999px;
+}
+
+/* Number inputs - remove arrows */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}

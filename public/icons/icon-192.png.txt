@@ -1,0 +1,2 @@
+Substitua este arquivo por um PNG 192x192 com o logo do app.
+Sugestão: gere em https://favicon.io com as iniciais "FM" ou use um ícone de folha/planta.
