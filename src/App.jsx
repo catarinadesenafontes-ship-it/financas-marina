@@ -9,6 +9,7 @@ import { Cartao } from './pages/Cartao'
 import { Mesada } from './pages/Mesada'
 import { Configuracoes } from './pages/Configuracoes'
 import { Relatorio } from './pages/Relatorio'
+import { Insights } from './pages/Insights'
 
 function ProtectedLayout() {
   const { user, loading } = useAuth()
@@ -55,6 +56,7 @@ export function App() {
         <Route path="/cartao" element={<Cartao />} />
         <Route path="/mesada" element={<Mesada />} />
         <Route path="/relatorio" element={<Relatorio />} />
+        <Route path="/insights" element={<Insights />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

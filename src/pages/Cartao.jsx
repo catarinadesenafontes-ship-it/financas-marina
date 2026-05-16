@@ -24,7 +24,7 @@ export function Cartao() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm())
 
-  const { gastos, totalGasto, limite, disponivel, config, isLoading, addGasto, deleteGasto, isAdding } = useCartao(faturaRef)
+  const { gastos, totalGasto, limite, disponivel, config, melhorDiaCompra, isLoading, addGasto, deleteGasto, isAdding } = useCartao(faturaRef)
   const { add: addLancamento } = useLancamentos(currentMonthRef())
   const { contas } = useContas()
 
@@ -123,6 +123,13 @@ export function Cartao() {
             </div>
             <p className="text-[10px] text-text-muted mt-1 text-right">{pct.toFixed(0)}% utilizado</p>
           </div>
+
+          {melhorDiaCompra && (
+            <div className="flex items-center gap-2 text-xs text-text-muted bg-cream rounded-lg px-3 py-2">
+              <span>Melhor dia de compra:</span>
+              <span className="font-mono font-semibold text-green-deep">dia {melhorDiaCompra}</span>
+            </div>
+          )}
 
           <div className="flex justify-end">
             <DateRangePicker

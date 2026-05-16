@@ -70,6 +70,7 @@ export function useCartao(faturaRef) {
   const totalGasto = (gastosQuery.data ?? []).reduce((s, g) => s + Number(g.valor), 0)
   const limite = configQuery.data?.limite ?? 0
   const disponivel = limite - totalGasto
+  const melhorDiaCompra = configQuery.data?.melhor_dia_compra ?? 19
 
   return {
     gastos: gastosQuery.data ?? [],
@@ -77,6 +78,7 @@ export function useCartao(faturaRef) {
     totalGasto,
     limite,
     disponivel,
+    melhorDiaCompra,
     isLoading: gastosQuery.isLoading,
     addGasto: addGasto.mutateAsync,
     deleteGasto: deleteGasto.mutateAsync,

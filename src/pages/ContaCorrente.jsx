@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Layers } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useContas } from '../hooks/useContas'
 import { useLancamentos } from '../hooks/useLancamentos'
@@ -156,16 +156,44 @@ export function ContaCorrente() {
       <PageHeader title="Conta Corrente" />
 
       <div className="px-4 md:px-0 pb-28 md:pb-0">
-        {/* Abas */}
+        {/* Abas com logos dos bancos */}
         <div className="flex gap-1 bg-cream-dark p-1 rounded-xl mb-4">
-          {TABS.map(t => (
+          {[
+            {
+              key: 'Itaú',
+              label: (
+                <span className="flex items-center justify-center gap-1.5">
+                  <span className="w-5 h-5 rounded-md flex items-center justify-center text-white font-bold italic text-xs" style={{ background: '#EC7000' }}>i</span>
+                  Itaú
+                </span>
+              ),
+            },
+            {
+              key: 'Inter',
+              label: (
+                <span className="flex items-center justify-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-white font-bold italic text-xs" style={{ background: '#FF6600' }}>i</span>
+                  Inter
+                </span>
+              ),
+            },
+            {
+              key: 'Consolidado',
+              label: (
+                <span className="flex items-center justify-center gap-1.5">
+                  <Layers size={13} />
+                  Consolidado
+                </span>
+              ),
+            },
+          ].map(({ key, label }) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={key}
+              onClick={() => setTab(key)}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors
-                ${tab === t ? 'bg-surface text-green-deep shadow-sm' : 'text-text-muted'}`}
+                ${tab === key ? 'bg-surface text-green-deep shadow-sm' : 'text-text-muted'}`}
             >
-              {t}
+              {label}
             </button>
           ))}
         </div>

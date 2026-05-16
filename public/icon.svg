@@ -1,4 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="22" fill="#1A3D2B"/>
-  <text y=".9em" font-size="78" x="11">💚</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fundo rounded square -->
+  <rect width="512" height="512" rx="96" fill="#1A3D2B"/>
+
+  <!-- Caule -->
+  <line x1="256" y1="210" x2="256" y2="390" stroke="#C8E6D8" stroke-width="16" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Folha esquerda -->
+  <path d="M256 310 C240 290 200 260 205 215 C210 175 256 210 256 210 Z" fill="#2D5C3E"/>
+
+  <!-- Folha direita -->
+  <path d="M256 310 C272 290 312 260 307 215 C302 175 256 210 256 210 Z" fill="#7EC8A4"/>
+
+  <!-- Nervura central da folha -->
+  <line x1="256" y1="210" x2="256" y2="310" stroke="#C8E6D8" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- Círculo no topo do caule -->
+  <circle cx="256" cy="148" r="68" stroke="#C8E6D8" stroke-width="12" fill="none"/>
+
+  <!-- Texto R$ dentro do círculo -->
+  <text
+    x="256" y="168"
+    text-anchor="middle"
+    font-family="Arial, sans-serif"
+    font-weight="700"
+    font-size="58"
+    fill="#C8E6D8"
+  >R$</text>
 </svg>

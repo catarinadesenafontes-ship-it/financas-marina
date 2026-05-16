@@ -89,14 +89,26 @@ function useSeis() {
 
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
-function SummaryCard({ label, value, color = 'text-text-primary', badge }) {
+function BankBadge({ banco }) {
+  if (!banco) return null
+  const isItau = banco === 'Itaú'
+  return (
+    <span
+      className={`inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-md text-[10px] font-bold italic text-white mb-1`}
+      style={{ background: isItau ? '#EC7000' : '#FF6600', borderRadius: isItau ? '4px' : '999px' }}
+    >
+      i <span className="not-italic font-semibold">{banco}</span>
+    </span>
+  )
+}
+
+function SummaryCard({ label, value, color = 'text-text-primary', banco }) {
   return (
     <Card className="flex flex-col gap-1">
-      <span className="text-xs text-text-muted font-medium uppercase tracking-wide">{label}</span>
-      <span className={`font-mono font-bold text-lg ${color}`}>{formatCurrency(value)}</span>
-      {badge && (
-        <span className="text-[10px] text-text-muted mt-0.5">{badge}</span>
+      {banco ? <BankBadge banco={banco} /> : (
+        <span className="text-xs text-text-muted font-medium uppercase tracking-wide">{label}</span>
       )}
+      <span className={`font-mono font-bold text-lg ${color}`}>{formatCurrency(value)}</span>
     </Card>
   )
 }
@@ -164,12 +176,12 @@ export function Dashboard() {
         {/* Cards de resumo */}
         <div className="grid grid-cols-2 gap-3">
           <SummaryCard
-            label="Itaú"
+            banco="Itaú"
             value={saldos.itau}
             color={saldos.itau >= 0 ? 'text-green-deep' : 'text-danger'}
           />
           <SummaryCard
-            label="Inter"
+            banco="Inter"
             value={saldos.inter}
             color={saldos.inter >= 0 ? 'text-green-deep' : 'text-danger'}
           />

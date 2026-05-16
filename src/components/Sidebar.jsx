@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Landmark, CreditCard, Gift, Settings, LogOut, PieChart } from 'lucide-react'
+import { LayoutDashboard, Landmark, CreditCard, Gift, Settings, LogOut, PieChart, Lightbulb } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 
 const links = [
@@ -8,6 +8,7 @@ const links = [
   { to: '/cartao', icon: CreditCard, label: 'Cartão' },
   { to: '/mesada', icon: Gift, label: 'Mesada' },
   { to: '/relatorio', icon: PieChart, label: 'Relatório' },
+  { to: '/insights', icon: Lightbulb, label: 'Insights' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ]
 
