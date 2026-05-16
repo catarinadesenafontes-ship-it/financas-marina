@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Trash2, CreditCard } from 'lucide-react'
 import { useCartao } from '../hooks/useCartao'
+import { useLancamentos } from '../hooks/useLancamentos'
+import { useContas } from '../hooks/useContas'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { FAB } from '../components/FAB'
@@ -8,27 +10,32 @@ import { Modal } from '../components/Modal'
 import { Input, Select } from '../components/Input'
 import { PageHeader } from '../components/PageHeader'
 import { MonthSelector } from '../components/MonthSelector'
+import { DateRangePicker } from '../components/DateRangePicker'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
-
-const CATEGORIAS = ['Alimentação','Transporte','Saúde','Lazer','Educação','Moradia','Outros']
+import { CATEGORIAS_DESPESA } from '../utils/categorias'
 
 export function Cartao() {
   const [faturaRef, setFaturaRef] = useState(currentMonthRef)
+  const [dateRange, setDateRange] = useState(undefined)
   const [modal, setModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm())
 
-  const { gastos, totalGasto, limite, disponivel, isLoading, addGasto, deleteGasto, isAdding } = useCartao(faturaRef)
+  const { gastos, totalGasto, limite, disponivel, config, isLoading, addGasto, deleteGasto, isAdding } = useCartao(faturaRef)
+  const { add: addLancamento } = useLancamentos(currentMonthRef())
+  const { contas } = useContas()
+
+  const bancoCartao = config?.banco ?? 'Itaú'
 
   function emptyForm() {
     return {
       valor: '',
       descricao: '',
       data: new Date().toISOString().split('T')[0],
-      categoria: 'Outros',
+      categoria: CATEGORIAS_DESPESA[0],
     }
   }
 
@@ -39,13 +46,37 @@ export function Cartao() {
     const valor = parseFloat(form.valor.replace(',', '.'))
     if (!valor || valor <= 0) return
     try {
+      // Registra no cartão
       await addGasto({ valor, descricao: form.descricao, data: form.data, categoria: form.categoria })
+
+      // Registra saída na CC do banco vinculado ao cartão
+      const contaVinculada = contas.find(c => c.nome === bancoCartao)
+      if (contaVinculada) {
+        await addLancamento({
+          conta_id: contaVinculada.id,
+          tipo: 'saida',
+          valor,
+          descricao: form.descricao,
+          data: form.data,
+          categoria: form.categoria,
+          forma_pagamento: 'Cartão de Crédito',
+        })
+      }
       resetModal()
     } catch (err) {
       console.error(err)
     }
   }
 
+  const filtrarPeriodo = (ls) => {
+    if (!dateRange?.from || !dateRange?.to) return ls
+    return ls.filter(g => {
+      const d = new Date(g.data + 'T12:00:00')
+      return d >= dateRange.from && d <= dateRange.to
+    })
+  }
+
+  const gastosFiltrados = filtrarPeriodo(gastos)
   const pct = limite > 0 ? Math.min((totalGasto / limite) * 100, 100) : 0
 
   return (
@@ -58,9 +89,11 @@ export function Cartao() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-text-muted">
               <CreditCard size={16} />
-              <span className="text-xs font-medium uppercase tracking-wide">Fatura</span>
+              <span className="text-xs font-medium uppercase tracking-wide">
+                Cartão {bancoCartao}
+              </span>
             </div>
-            <MonthSelector value={faturaRef} onChange={setFaturaRef} />
+            <MonthSelector value={faturaRef} onChange={v => { setFaturaRef(v); setDateRange(undefined) }} />
           </div>
 
           <div className="grid grid-cols-3 gap-3">
@@ -80,7 +113,6 @@ export function Cartao() {
             </div>
           </div>
 
-          {/* Barra de progresso */}
           <div>
             <div className="h-2 bg-cream-dark rounded-full overflow-hidden">
               <div
@@ -91,6 +123,14 @@ export function Cartao() {
             </div>
             <p className="text-[10px] text-text-muted mt-1 text-right">{pct.toFixed(0)}% utilizado</p>
           </div>
+
+          <div className="flex justify-end">
+            <DateRangePicker
+              range={dateRange}
+              onRangeChange={setDateRange}
+              onClear={() => setDateRange(undefined)}
+            />
+          </div>
         </Card>
 
         {/* Lista de gastos */}
@@ -99,13 +139,13 @@ export function Cartao() {
 
           {isLoading ? (
             <div className="text-center py-10 text-text-muted text-sm">Carregando...</div>
-          ) : gastos.length === 0 ? (
+          ) : gastosFiltrados.length === 0 ? (
             <div className="text-center py-10 text-text-muted text-sm">
-              Nenhum gasto registrado nesta fatura
+              Nenhum gasto no período
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {gastos.map(g => (
+              {gastosFiltrados.map(g => (
                 <div key={g.id} className="bg-surface rounded-xl shadow-card px-4 py-3 flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-orange-50 text-warning flex items-center justify-center flex-shrink-0">
                     <CategoryIcon categoria={g.categoria} size={16} />
@@ -143,6 +183,9 @@ export function Cartao() {
 
       <Modal open={modal} onClose={resetModal} title="Registrar Gasto no Cartão">
         <form onSubmit={handleAdd} className="flex flex-col gap-4">
+          <div className="bg-cream rounded-xl px-4 py-3 text-xs text-text-secondary">
+            Cartão vinculado: <strong>{bancoCartao}</strong> — o lançamento também será registrado na conta corrente.
+          </div>
           <Input
             label="Valor (R$)"
             type="number"
@@ -173,7 +216,7 @@ export function Cartao() {
             value={form.categoria}
             onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
           >
-            {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+            {CATEGORIAS_DESPESA.map(c => <option key={c}>{c}</option>)}
           </Select>
           <div className="flex gap-3 mt-2">
             <Button type="button" variant="secondary" className="flex-1" onClick={resetModal}>

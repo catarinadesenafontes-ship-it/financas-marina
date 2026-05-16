@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Trash2 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import { useContas } from '../hooks/useContas'
 import { useLancamentos } from '../hooks/useLancamentos'
+import { useCartao } from '../hooks/useCartao'
+import { useAuth } from '../hooks/useAuth'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { FAB } from '../components/FAB'
@@ -9,32 +12,39 @@ import { Modal } from '../components/Modal'
 import { Input, Select } from '../components/Input'
 import { PageHeader } from '../components/PageHeader'
 import { MonthSelector } from '../components/MonthSelector'
+import { DateRangePicker } from '../components/DateRangePicker'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
+import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
 
-const CATEGORIAS = ['Alimentação','Transporte','Saúde','Lazer','Educação','Moradia','Outros']
 const TABS = ['Itaú', 'Inter', 'Consolidado']
+const FORMAS_PAGAMENTO = ['Pix', 'Espécie', 'Cartão de Crédito']
 
 export function ContaCorrente() {
+  const { user } = useAuth()
   const [tab, setTab] = useState('Itaú')
   const [mesRef, setMesRef] = useState(currentMonthRef)
+  const [dateRange, setDateRange] = useState(undefined)
   const [modal, setModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm())
 
-  const { contas, contaItau, contaInter, isLoading: loadingContas } = useContas()
+  const { contas, contaItau, contaInter } = useContas()
   const { lancamentos, isLoading, add, remove, isAdding, isRemoving } = useLancamentos(mesRef)
+  const { addGasto: addGastoCartao, config: configCartao } = useCartao(currentMonthRef())
 
   function emptyForm() {
     return {
       conta_id: '',
       tipo: 'saida',
+      forma_pagamento: 'Pix',
+      banco: 'Itaú',
       valor: '',
       descricao: '',
       data: new Date().toISOString().split('T')[0],
-      categoria: 'Outros',
+      categoria: CATEGORIAS_DESPESA[0],
       contaOrigemId: '',
       contaDestinoId: '',
     }
@@ -58,14 +68,39 @@ export function ContaCorrente() {
           data: form.data,
           categoria: null,
         })
+      } else if (form.tipo === 'saida' && form.forma_pagamento === 'Cartão de Crédito') {
+        // Cria o gasto no cartão
+        await addGastoCartao({
+          valor,
+          descricao: form.descricao,
+          data: form.data,
+          categoria: form.categoria,
+        })
+        // Cria também a saída na CC vinculada ao cartão
+        const bancoCartao = configCartao?.banco ?? 'Itaú'
+        const contaCartao = contas.find(c => c.nome === bancoCartao)
+        if (contaCartao) {
+          await add({
+            conta_id: contaCartao.id,
+            tipo: 'saida',
+            valor,
+            descricao: form.descricao,
+            data: form.data,
+            categoria: form.categoria,
+            forma_pagamento: 'Cartão de Crédito',
+          })
+        }
       } else {
+        // Pix ou Espécie: define conta pelo banco selecionado
+        const contaSelecionada = contas.find(c => c.nome === form.banco)
         await add({
-          conta_id: form.conta_id || contaItau?.id,
+          conta_id: contaSelecionada?.id || contaItau?.id,
           tipo: form.tipo,
           valor,
           descricao: form.descricao,
           data: form.data,
           categoria: form.categoria,
+          forma_pagamento: form.tipo === 'saida' ? form.forma_pagamento : null,
         })
       }
       resetModal()
@@ -95,14 +130,29 @@ export function ContaCorrente() {
   const itauLanc = contaItau ? lancamentosDaConta(contaItau.id) : []
   const interLanc = contaInter ? lancamentosDaConta(contaInter.id) : []
 
-  let visibleLanc = []
+  const filtrarPeriodo = (ls) => {
+    if (!dateRange?.from || !dateRange?.to) return ls
+    return ls.filter(l => {
+      const d = new Date(l.data + 'T12:00:00')
+      return d >= dateRange.from && d <= dateRange.to
+    })
+  }
+
+  let allLanc = []
   let saldo = 0
-  if (tab === 'Itaú') { visibleLanc = itauLanc; saldo = saldoConta(itauLanc) }
-  else if (tab === 'Inter') { visibleLanc = interLanc; saldo = saldoConta(interLanc) }
-  else { visibleLanc = [...lancamentos].sort((a, b) => b.data.localeCompare(a.data)); saldo = saldoConta(itauLanc) + saldoConta(interLanc) }
+  if (tab === 'Itaú') { allLanc = itauLanc; saldo = saldoConta(itauLanc) }
+  else if (tab === 'Inter') { allLanc = interLanc; saldo = saldoConta(interLanc) }
+  else {
+    allLanc = [...lancamentos].sort((a, b) => b.data.localeCompare(a.data))
+    saldo = saldoConta(itauLanc) + saldoConta(interLanc)
+  }
+
+  const visibleLanc = filtrarPeriodo(allLanc)
+  const categoriasDespesa = CATEGORIAS_DESPESA
+  const categoriasReceita = CATEGORIAS_RECEITA
 
   return (
-    <div className="space-y-0">
+    <div>
       <PageHeader title="Conta Corrente" />
 
       <div className="px-4 md:px-0 pb-28 md:pb-0">
@@ -120,16 +170,23 @@ export function ContaCorrente() {
           ))}
         </div>
 
-        {/* Saldo + filtro */}
+        {/* Saldo + filtros */}
         <Card className="mb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-xs text-text-muted uppercase tracking-wide mb-1">Saldo do mês</p>
               <p className={`font-mono font-bold text-2xl ${saldo >= 0 ? 'text-green-deep' : 'text-danger'}`}>
                 {formatCurrency(saldo)}
               </p>
             </div>
-            <MonthSelector value={mesRef} onChange={setMesRef} />
+            <MonthSelector value={mesRef} onChange={v => { setMesRef(v); setDateRange(undefined) }} />
+          </div>
+          <div className="flex justify-end">
+            <DateRangePicker
+              range={dateRange}
+              onRangeChange={setDateRange}
+              onClear={() => setDateRange(undefined)}
+            />
           </div>
         </Card>
 
@@ -138,7 +195,7 @@ export function ContaCorrente() {
           <div className="text-center py-10 text-text-muted text-sm">Carregando...</div>
         ) : visibleLanc.length === 0 ? (
           <div className="text-center py-10 text-text-muted text-sm">
-            Nenhum lançamento neste mês
+            Nenhum lançamento no período
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -162,24 +219,30 @@ export function ContaCorrente() {
           <Select
             label="Tipo"
             value={form.tipo}
-            onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}
+            onChange={e => setForm(f => ({
+              ...f,
+              tipo: e.target.value,
+              categoria: e.target.value === 'entrada' ? CATEGORIAS_RECEITA[0] : CATEGORIAS_DESPESA[0],
+            }))}
           >
             <option value="saida">Saída</option>
             <option value="entrada">Entrada</option>
             <option value="transferencia">Transferência entre contas</option>
           </Select>
 
-          {form.tipo !== 'transferencia' ? (
+          {/* Forma de pagamento (só para saída) */}
+          {form.tipo === 'saida' && (
             <Select
-              label="Conta"
-              value={form.conta_id || contaItau?.id || ''}
-              onChange={e => setForm(f => ({ ...f, conta_id: e.target.value }))}
+              label="Como foi pago?"
+              value={form.forma_pagamento}
+              onChange={e => setForm(f => ({ ...f, forma_pagamento: e.target.value }))}
             >
-              {contas.map(c => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
+              {FORMAS_PAGAMENTO.map(fp => <option key={fp}>{fp}</option>)}
             </Select>
-          ) : (
+          )}
+
+          {/* Banco — para Pix/Espécie (saída/entrada) ou transferência */}
+          {form.tipo === 'transferencia' ? (
             <>
               <Select
                 label="De (origem)"
@@ -188,9 +251,7 @@ export function ContaCorrente() {
                 required
               >
                 <option value="">Selecione</option>
-                {contas.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
+                {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </Select>
               <Select
                 label="Para (destino)"
@@ -199,12 +260,19 @@ export function ContaCorrente() {
                 required
               >
                 <option value="">Selecione</option>
-                {contas.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
+                {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </Select>
             </>
-          )}
+          ) : form.tipo === 'entrada' || (form.tipo === 'saida' && form.forma_pagamento !== 'Cartão de Crédito') ? (
+            <Select
+              label="Banco"
+              value={form.banco}
+              onChange={e => setForm(f => ({ ...f, banco: e.target.value }))}
+            >
+              <option>Itaú</option>
+              <option>Inter</option>
+            </Select>
+          ) : null}
 
           <Input
             label="Valor (R$)"
@@ -240,7 +308,8 @@ export function ContaCorrente() {
               value={form.categoria}
               onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
             >
-              {CATEGORIAS.map(c => <option key={c}>{c}</option>)}
+              {(form.tipo === 'entrada' ? categoriasReceita : categoriasDespesa)
+                .map(c => <option key={c}>{c}</option>)}
             </Select>
           )}
 
@@ -258,10 +327,7 @@ export function ContaCorrente() {
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={async () => {
-          await remove(deleteTarget)
-          setDeleteTarget(null)
-        }}
+        onConfirm={async () => { await remove(deleteTarget); setDeleteTarget(null) }}
         loading={isRemoving}
         message="Deseja excluir este lançamento? Esta ação não pode ser desfeita."
       />
@@ -275,6 +341,7 @@ function LancamentoItem({ lancamento: l, todoLanc, onDelete }) {
     l.tipo === 'transferencia' &&
     todoLanc.some(lp => lp.id === l.transferencia_par_id && lp.conta_id !== l.conta_id)
   )
+  const formaPag = l.forma_pagamento
 
   return (
     <div className="bg-surface rounded-xl shadow-card px-4 py-3 flex items-center gap-3">
@@ -284,7 +351,7 @@ function LancamentoItem({ lancamento: l, todoLanc, onDelete }) {
         <CategoryIcon
           categoria={
             l.tipo === 'transferencia' ? 'Transferência' :
-            l.tipo === 'entrada' ? 'Entrada' : (l.categoria ?? 'Outros')
+            l.tipo === 'entrada' ? (l.categoria ?? 'Entrada') : (l.categoria ?? 'Saída')
           }
           size={16}
         />
@@ -292,12 +359,17 @@ function LancamentoItem({ lancamento: l, todoLanc, onDelete }) {
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary truncate">{l.descricao}</p>
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           <span className="text-[10px] text-text-muted">{formatDate(l.data)}</span>
           {contaNome && (
             <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded text-white
               ${contaNome === 'Itaú' ? 'bg-itau' : 'bg-inter'}`}>
               {contaNome}
+            </span>
+          )}
+          {formaPag && (
+            <span className="text-[10px] text-text-muted bg-cream px-1.5 py-0.5 rounded">
+              {formaPag}
             </span>
           )}
         </div>

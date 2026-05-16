@@ -53,6 +53,44 @@ body {
   border-radius: 999px;
 }
 
+/* react-day-picker — tema Marina */
+.rdp-marina {
+  --rdp-accent-color: #1A3D2B;
+  --rdp-accent-background-color: #C8E6D8;
+  --rdp-day-font: 'DM Sans', sans-serif;
+}
+.rdp-marina .rdp-day_selected,
+.rdp-marina .rdp-day_selected:hover {
+  background-color: #1A3D2B;
+  color: white;
+}
+.rdp-marina .rdp-day_range_middle {
+  background-color: #C8E6D8;
+  color: #1A3D2B;
+}
+.rdp-marina .rdp-day:hover:not([disabled]) {
+  background-color: #C8E6D8;
+}
+.rdp-marina .rdp-caption_label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1A3D2B;
+  text-transform: capitalize;
+}
+.rdp-marina .rdp-head_cell {
+  font-size: 0.7rem;
+  color: #8BA898;
+  font-weight: 500;
+}
+.rdp-marina .rdp-nav_button {
+  color: #4A6458;
+}
+.rdp-marina .rdp-day {
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
 /* Number inputs - remove arrows */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {

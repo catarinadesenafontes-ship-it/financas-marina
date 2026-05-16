@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Landmark, CreditCard, Gift } from 'lucide-react'
+import { LayoutDashboard, Landmark, CreditCard, Gift, PieChart } from 'lucide-react'
 
 const links = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Início' },
   { to: '/conta-corrente', icon: Landmark, label: 'Contas' },
   { to: '/cartao', icon: CreditCard, label: 'Cartão' },
   { to: '/mesada', icon: Gift, label: 'Mesada' },
+  { to: '/relatorio', icon: PieChart, label: 'Relatório' },
 ]
 
 export function BottomNav() {
@@ -17,13 +18,13 @@ export function BottomNav() {
             <NavLink
               to={to}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors
+                `flex flex-col items-center gap-0.5 py-2 text-[9px] font-medium transition-colors
                 ${isActive ? 'text-green-deep' : 'text-text-muted'}`
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+                  <Icon size={19} strokeWidth={isActive ? 2.5 : 1.8} />
                   {label}
                 </>
               )}

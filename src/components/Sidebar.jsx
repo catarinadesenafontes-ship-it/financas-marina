@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Landmark, CreditCard, Gift, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Landmark, CreditCard, Gift, Settings, LogOut, PieChart } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 
 const links = [
@@ -7,6 +7,7 @@ const links = [
   { to: '/conta-corrente', icon: Landmark, label: 'Contas' },
   { to: '/cartao', icon: CreditCard, label: 'Cartão' },
   { to: '/mesada', icon: Gift, label: 'Mesada' },
+  { to: '/relatorio', icon: PieChart, label: 'Relatório' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ]
 
@@ -28,10 +29,7 @@ export function Sidebar() {
                 to={to}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors
-                  ${isActive
-                    ? 'bg-green-mid text-white'
-                    : 'text-green-pale hover:bg-green-mid/60'
-                  }`
+                  ${isActive ? 'bg-green-mid text-white' : 'text-green-pale hover:bg-green-mid/60'}`
                 }
               >
                 <Icon size={18} />

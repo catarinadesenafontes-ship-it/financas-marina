@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
+import { AlertCircle } from 'lucide-react'
 import { useCartao } from '../hooks/useCartao'
 import { useAuth } from '../hooks/useAuth'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
-import { Input } from '../components/Input'
+import { Input, Select } from '../components/Input'
 import { PageHeader } from '../components/PageHeader'
 import { currentMonthRef } from '../utils/formatDate'
 
@@ -20,14 +21,18 @@ export function Configuracoes() {
   const [limite, setLimite] = useState('')
   const [diaFecha, setDiaFecha] = useState('')
   const [diaVence, setDiaVence] = useState('')
+  const [banco, setBanco] = useState('Itaú')
   const [loadingConfig, setLoadingConfig] = useState(false)
   const [configSuccess, setConfigSuccess] = useState(false)
+
+  const cartaoNaoConfigurado = !config || !config.limite || config.limite === 0
 
   useEffect(() => {
     if (config) {
       setLimite(String(config.limite ?? ''))
       setDiaFecha(String(config.dia_fechamento ?? ''))
       setDiaVence(String(config.dia_vencimento ?? ''))
+      setBanco(config.banco ?? 'Itaú')
     }
   }, [config])
 
@@ -59,6 +64,7 @@ export function Configuracoes() {
         limite: parseFloat(limite) || 0,
         dia_fechamento: parseInt(diaFecha) || 1,
         dia_vencimento: parseInt(diaVence) || 10,
+        banco,
       })
       setConfigSuccess(true)
     } catch (err) {
@@ -73,10 +79,31 @@ export function Configuracoes() {
       <PageHeader title="Configurações" />
 
       <div className="px-4 md:px-0 pb-28 md:pb-0 space-y-5">
+        {/* Aviso se cartão não configurado */}
+        {cartaoNaoConfigurado && (
+          <div className="flex gap-3 bg-warning/10 border border-warning/30 rounded-xl px-4 py-3">
+            <AlertCircle size={18} className="text-warning flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-warning">Configure o cartão antes de usar</p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                Defina o limite, banco vinculado e as datas de fechamento e vencimento para usar a aba Cartão corretamente.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Cartão */}
         <Card>
           <h2 className="font-semibold text-text-primary mb-4">Cartão de Crédito</h2>
           <form onSubmit={handleConfig} className="flex flex-col gap-4">
+            <Select
+              label="Banco do cartão"
+              value={banco}
+              onChange={e => setBanco(e.target.value)}
+            >
+              <option>Itaú</option>
+              <option>Inter</option>
+            </Select>
             <Input
               label="Limite total (R$)"
               type="number"

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Trash2, Plus, Gift } from 'lucide-react'
 import { useMesada } from '../hooks/useMesada'
+import { useLancamentos } from '../hooks/useLancamentos'
+import { useContas } from '../hooks/useContas'
+import { useCartao } from '../hooks/useCartao'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { FAB } from '../components/FAB'
@@ -8,34 +11,59 @@ import { Modal } from '../components/Modal'
 import { Input, Select } from '../components/Input'
 import { PageHeader } from '../components/PageHeader'
 import { MonthSelector } from '../components/MonthSelector'
+import { DateRangePicker } from '../components/DateRangePicker'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
+import { CATEGORIAS_DESPESA } from '../utils/categorias'
+
+const FORMAS_PAGAMENTO = ['Pix', 'Espécie', 'Cartão de Crédito']
 
 export function Mesada() {
   const [mesRef, setMesRef] = useState(currentMonthRef)
-  const [modal, setModal] = useState(null) // 'recebimento' | 'gasto'
-  const [deleteTarget, setDeleteTarget] = useState(null) // { id, tipo }
+  const [dateRange, setDateRange] = useState(undefined)
+  const [modal, setModal] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [formRec, setFormRec] = useState(emptyRec())
   const [formGasto, setFormGasto] = useState(emptyGasto())
 
-  const {
-    recebimentos, gastos, totalRecebido, totalGasto, saldo,
-    isLoading, addRecebimento, addGasto, deleteRecebimento, deleteGasto,
-  } = useMesada(mesRef)
+  const { recebimentos, gastos, totalRecebido, totalGasto, saldo,
+    isLoading, addRecebimento, addGasto, deleteRecebimento, deleteGasto } = useMesada(mesRef)
+  const { add: addLancamento } = useLancamentos(mesRef)
+  const { addGasto: addGastoCartao, config: configCartao } = useCartao(currentMonthRef())
+  const { contas } = useContas()
 
   function emptyRec() {
-    return { valor: '', origem: 'mãe', data: new Date().toISOString().split('T')[0], observacao: '' }
+    return { valor: '', origem: 'mãe', banco: 'Itaú', data: new Date().toISOString().split('T')[0], observacao: '' }
   }
   function emptyGasto() {
-    return { valor: '', descricao: '', data: new Date().toISOString().split('T')[0] }
+    return {
+      valor: '', descricao: '', data: new Date().toISOString().split('T')[0],
+      forma_pagamento: 'Pix', banco: 'Itaú',
+    }
   }
 
   async function handleAddRec(e) {
     e.preventDefault()
     const valor = parseFloat(formRec.valor.replace(',', '.'))
     if (!valor || valor <= 0) return
+
     await addRecebimento({ valor, origem: formRec.origem, data: formRec.data, observacao: formRec.observacao })
+
+    // Cria entrada na CC (Mesada Família entra em alguma conta)
+    const contaSelecionada = contas.find(c => c.nome === formRec.banco)
+    if (contaSelecionada) {
+      await addLancamento({
+        conta_id: contaSelecionada.id,
+        tipo: 'entrada',
+        valor,
+        descricao: `Mesada — ${formRec.origem}`,
+        data: formRec.data,
+        categoria: 'Mesada Família',
+        forma_pagamento: null,
+      })
+    }
+
     setFormRec(emptyRec())
     setModal(null)
   }
@@ -44,7 +72,43 @@ export function Mesada() {
     e.preventDefault()
     const valor = parseFloat(formGasto.valor.replace(',', '.'))
     if (!valor || valor <= 0) return
+
+    // Sempre cria o registro na mesada
     await addGasto({ valor, descricao: formGasto.descricao, data: formGasto.data })
+
+    if (formGasto.forma_pagamento === 'Cartão de Crédito') {
+      // Cria no cartão
+      await addGastoCartao({ valor, descricao: formGasto.descricao, data: formGasto.data, categoria: CATEGORIAS_DESPESA[0] })
+      // Cria saída na CC do banco do cartão
+      const bancoCartao = configCartao?.banco ?? 'Itaú'
+      const contaCartao = contas.find(c => c.nome === bancoCartao)
+      if (contaCartao) {
+        await addLancamento({
+          conta_id: contaCartao.id,
+          tipo: 'saida',
+          valor,
+          descricao: formGasto.descricao,
+          data: formGasto.data,
+          categoria: null,
+          forma_pagamento: 'Cartão de Crédito',
+        })
+      }
+    } else {
+      // Pix ou Espécie: cria saída na CC selecionada
+      const contaSelecionada = contas.find(c => c.nome === formGasto.banco)
+      if (contaSelecionada) {
+        await addLancamento({
+          conta_id: contaSelecionada.id,
+          tipo: 'saida',
+          valor,
+          descricao: formGasto.descricao,
+          data: formGasto.data,
+          categoria: null,
+          forma_pagamento: formGasto.forma_pagamento,
+        })
+      }
+    }
+
     setFormGasto(emptyGasto())
     setModal(null)
   }
@@ -56,14 +120,26 @@ export function Mesada() {
     setDeleteTarget(null)
   }
 
+  const filtrarPeriodo = (ls) => {
+    if (!dateRange?.from || !dateRange?.to) return ls
+    return ls.filter(l => {
+      const d = new Date(l.data + 'T12:00:00')
+      return d >= dateRange.from && d <= dateRange.to
+    })
+  }
+
+  const recFiltrados = filtrarPeriodo(recebimentos)
+  const gastosFiltrados = filtrarPeriodo(gastos)
+
   return (
     <div>
       <PageHeader title="Mesada" />
 
       <div className="px-4 md:px-0 pb-28 md:pb-0 space-y-4">
-        {/* Filtro mês */}
-        <div className="flex justify-center">
-          <MonthSelector value={mesRef} onChange={setMesRef} />
+        {/* Filtros */}
+        <div className="flex items-center justify-between">
+          <MonthSelector value={mesRef} onChange={v => { setMesRef(v); setDateRange(undefined) }} />
+          <DateRangePicker range={dateRange} onRangeChange={setDateRange} onClear={() => setDateRange(undefined)} />
         </div>
 
         {/* Card resumo */}
@@ -101,11 +177,11 @@ export function Mesada() {
                   <Plus size={12} /> Registrar
                 </button>
               </div>
-              {recebimentos.length === 0 ? (
-                <p className="text-xs text-text-muted py-4 text-center">Nenhum recebimento este mês</p>
+              {recFiltrados.length === 0 ? (
+                <p className="text-xs text-text-muted py-4 text-center">Nenhum recebimento no período</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {recebimentos.map(r => (
+                  {recFiltrados.map(r => (
                     <div key={r.id} className="bg-surface rounded-xl shadow-card px-4 py-3 flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-green-pale text-green-deep flex items-center justify-center">
                         <Gift size={16} />
@@ -143,11 +219,11 @@ export function Mesada() {
                   <Plus size={12} /> Registrar
                 </button>
               </div>
-              {gastos.length === 0 ? (
-                <p className="text-xs text-text-muted py-4 text-center">Nenhum gasto registrado</p>
+              {gastosFiltrados.length === 0 ? (
+                <p className="text-xs text-text-muted py-4 text-center">Nenhum gasto no período</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {gastos.map(g => (
+                  {gastosFiltrados.map(g => (
                     <div key={g.id} className="bg-surface rounded-xl shadow-card px-4 py-3 flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-red-50 text-danger flex items-center justify-center text-xs font-bold">
                         R$
@@ -201,6 +277,14 @@ export function Mesada() {
             <option value="pai">Pai</option>
             <option value="outros">Outros</option>
           </Select>
+          <Select
+            label="Entrou em qual banco?"
+            value={formRec.banco}
+            onChange={e => setFormRec(f => ({ ...f, banco: e.target.value }))}
+          >
+            <option>Itaú</option>
+            <option>Inter</option>
+          </Select>
           <Input
             label="Data"
             type="date"
@@ -249,6 +333,23 @@ export function Mesada() {
             onChange={e => setFormGasto(f => ({ ...f, data: e.target.value }))}
             required
           />
+          <Select
+            label="Como foi pago?"
+            value={formGasto.forma_pagamento}
+            onChange={e => setFormGasto(f => ({ ...f, forma_pagamento: e.target.value }))}
+          >
+            {FORMAS_PAGAMENTO.map(fp => <option key={fp}>{fp}</option>)}
+          </Select>
+          {formGasto.forma_pagamento !== 'Cartão de Crédito' && (
+            <Select
+              label="Banco"
+              value={formGasto.banco}
+              onChange={e => setFormGasto(f => ({ ...f, banco: e.target.value }))}
+            >
+              <option>Itaú</option>
+              <option>Inter</option>
+            </Select>
+          )}
           <div className="flex gap-3 mt-2">
             <Button type="button" variant="secondary" className="flex-1" onClick={() => setModal(null)}>Cancelar</Button>
             <Button type="submit" className="flex-1">Salvar</Button>

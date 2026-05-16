@@ -8,6 +8,7 @@ import { ContaCorrente } from './pages/ContaCorrente'
 import { Cartao } from './pages/Cartao'
 import { Mesada } from './pages/Mesada'
 import { Configuracoes } from './pages/Configuracoes'
+import { Relatorio } from './pages/Relatorio'
 
 function ProtectedLayout() {
   const { user, loading } = useAuth()
@@ -53,6 +54,7 @@ export function App() {
         <Route path="/conta-corrente" element={<ContaCorrente />} />
         <Route path="/cartao" element={<Cartao />} />
         <Route path="/mesada" element={<Mesada />} />
+        <Route path="/relatorio" element={<Relatorio />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
