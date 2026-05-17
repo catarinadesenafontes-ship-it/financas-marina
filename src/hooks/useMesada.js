@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
@@ -10,6 +10,7 @@ function monthDateRange(mesRef) {
 
 export function useMesada(mesRef) {
   const { user } = useAuth()
+  const qc = useQueryClient()
 
   const query = useQuery({
     queryKey: ['mesada_ajuda', user?.id, mesRef],
@@ -42,6 +43,30 @@ export function useMesada(mesRef) {
     staleTime: 1000 * 30,
   })
 
+  const deleteLancamento = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('lancamentos_cc').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mesada_ajuda'] })
+      qc.invalidateQueries({ queryKey: ['lancamentos'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+
+  const deleteGasto = useMutation({
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('gastos_cartao').delete().eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mesada_ajuda'] })
+      qc.invalidateQueries({ queryKey: ['gastos_cartao'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+
   const lancamentos = query.data?.lancamentos ?? []
   const gastos_cartao = query.data?.gastos_cartao ?? []
 
@@ -59,11 +84,13 @@ export function useMesada(mesRef) {
       ...l,
       fonte: l.contas?.nome ?? 'CC',
       isReceita: l.tipo === 'entrada',
+      isCartao: false,
     })),
     ...gastos_cartao.map(g => ({
       ...g,
       fonte: 'Cartão',
       isReceita: false,
+      isCartao: true,
     })),
   ].sort((a, b) => b.data.localeCompare(a.data))
 
@@ -73,5 +100,7 @@ export function useMesada(mesRef) {
     totalGasto,
     saldo: totalRecebido - totalGasto,
     isLoading: query.isLoading,
+    deleteLancamento: deleteLancamento.mutateAsync,
+    deleteGasto: deleteGasto.mutateAsync,
   }
 }

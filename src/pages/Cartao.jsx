@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { Trash2, CreditCard } from 'lucide-react'
+import { Trash2, CreditCard, Pencil } from 'lucide-react'
 import { useCartao } from '../hooks/useCartao'
+import { EditGastoCartaoModal } from '../components/EditGastoCartaoModal'
+import { Toast, useToast } from '../components/Toast'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { FAB } from '../components/FAB'
@@ -21,6 +23,8 @@ export function Cartao() {
   const [modal, setModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm())
+  const [editTarget, setEditTarget] = useState(null)
+  const { toast, showSuccess, showError, hideToast } = useToast()
 
   const { gastos, totalGasto, limite, disponivel, config, melhorDiaCompra, isLoading, addGasto, deleteGasto, isAdding } = useCartao(faturaRef)
 
@@ -166,6 +170,12 @@ export function Cartao() {
                       -{formatCurrency(Number(g.valor))}
                     </span>
                     <button
+                      onClick={() => setEditTarget(g)}
+                      className="p-1.5 rounded-lg text-text-muted hover:text-green-deep hover:bg-green-pale transition-colors"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
                       onClick={() => setDeleteTarget(g.id)}
                       className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-red-50 transition-colors"
                     >
@@ -240,6 +250,15 @@ export function Cartao() {
         onConfirm={async () => { await deleteGasto(deleteTarget); setDeleteTarget(null) }}
         message="Deseja excluir este gasto? Esta ação não pode ser desfeita."
       />
+
+      <EditGastoCartaoModal
+        open={!!editTarget}
+        gasto={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSuccess={() => showSuccess('Lançamento atualizado')}
+        onError={() => showError('Não foi possível salvar. Tente novamente.')}
+      />
+      <Toast {...toast} onHide={hideToast} />
     </div>
   )
 }

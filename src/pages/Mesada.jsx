@@ -1,16 +1,39 @@
 import { useState } from 'react'
-import { Gift } from 'lucide-react'
+import { Gift, Pencil, Trash2 } from 'lucide-react'
 import { useMesada } from '../hooks/useMesada'
 import { Card } from '../components/Card'
 import { PageHeader } from '../components/PageHeader'
 import { MonthSelector } from '../components/MonthSelector'
 import { CategoryIcon } from '../components/CategoryIcon'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { EditLancamentoModal } from '../components/EditLancamentoModal'
+import { EditGastoCartaoModal } from '../components/EditGastoCartaoModal'
+import { Toast, useToast } from '../components/Toast'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
 
 export function Mesada() {
   const [mesRef, setMesRef] = useState(currentMonthRef)
-  const { allItems, totalRecebido, totalGasto, saldo, isLoading } = useMesada(mesRef)
+  const [editTarget, setEditTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const { toast, showSuccess, showError, hideToast } = useToast()
+
+  const { allItems, totalRecebido, totalGasto, saldo, isLoading, deleteLancamento, deleteGasto } = useMesada(mesRef)
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    try {
+      if (deleteTarget.isCartao) {
+        await deleteGasto(deleteTarget.id)
+      } else {
+        await deleteLancamento(deleteTarget.id)
+      }
+    } catch {
+      showError('Não foi possível excluir. Tente novamente.')
+    } finally {
+      setDeleteTarget(null)
+    }
+  }
 
   return (
     <div>
@@ -84,15 +107,58 @@ export function Mesada() {
                   </div>
                 </div>
 
-                <span className={`font-mono text-sm font-semibold flex-shrink-0
-                  ${item.isReceita ? 'text-green-deep' : 'text-danger'}`}>
-                  {item.isReceita ? '+' : '-'}{formatCurrency(Number(item.valor))}
-                </span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className={`font-mono text-sm font-semibold
+                    ${item.isReceita ? 'text-green-deep' : 'text-danger'}`}>
+                    {item.isReceita ? '+' : '-'}{formatCurrency(Number(item.valor))}
+                  </span>
+                  <button
+                    onClick={() => setEditTarget(item)}
+                    className="p-1.5 rounded-lg text-text-muted hover:text-green-deep hover:bg-green-pale transition-colors"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(item)}
+                    className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        message="Deseja excluir este lançamento? Esta ação não pode ser desfeita."
+      />
+
+      {editTarget && !editTarget.isCartao && (
+        <EditLancamentoModal
+          open={!!editTarget}
+          lancamento={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSuccess={() => showSuccess('Lançamento atualizado')}
+          onError={() => showError('Não foi possível salvar. Tente novamente.')}
+        />
+      )}
+
+      {editTarget && editTarget.isCartao && (
+        <EditGastoCartaoModal
+          open={!!editTarget}
+          gasto={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSuccess={() => showSuccess('Lançamento atualizado')}
+          onError={() => showError('Não foi possível salvar. Tente novamente.')}
+        />
+      )}
+
+      <Toast {...toast} onHide={hideToast} />
     </div>
   )
 }

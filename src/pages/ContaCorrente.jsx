@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Trash2, Layers } from 'lucide-react'
+import { Trash2, Layers, Pencil } from 'lucide-react'
 import { useContas } from '../hooks/useContas'
 import { useLancamentos } from '../hooks/useLancamentos'
 import { useAuth } from '../hooks/useAuth'
@@ -16,6 +16,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
 import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
+import { EditLancamentoModal } from '../components/EditLancamentoModal'
+import { Toast, useToast } from '../components/Toast'
 
 const FORMAS_PAGAMENTO = ['Pix', 'Espécie']
 
@@ -27,6 +29,8 @@ export function ContaCorrente() {
   const [modal, setModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm())
+  const [editTarget, setEditTarget] = useState(null)
+  const { toast, showSuccess, showError, hideToast } = useToast()
 
   const { contas, contaItau, contaInter } = useContas()
   const { lancamentos, isLoading, add, remove, isAdding, isRemoving } = useLancamentos(mesRef)
@@ -208,6 +212,7 @@ export function ContaCorrente() {
                 lancamento={l}
                 todoLanc={lancamentos}
                 onDelete={() => setDeleteTarget(l.id)}
+                onEdit={() => setEditTarget(l)}
               />
             ))}
           </div>
@@ -345,11 +350,20 @@ export function ContaCorrente() {
         loading={isRemoving}
         message="Deseja excluir este lançamento? Esta ação não pode ser desfeita."
       />
+
+      <EditLancamentoModal
+        open={!!editTarget}
+        lancamento={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSuccess={() => showSuccess('Lançamento atualizado')}
+        onError={() => showError('Não foi possível salvar. Tente novamente.')}
+      />
+      <Toast {...toast} onHide={hideToast} />
     </div>
   )
 }
 
-function LancamentoItem({ lancamento: l, todoLanc, onDelete }) {
+function LancamentoItem({ lancamento: l, todoLanc, onDelete, onEdit }) {
   const contaNome = l.contas?.nome ?? ''
   const isEntrada = l.tipo === 'entrada' || (
     l.tipo === 'transferencia' &&
@@ -399,6 +413,12 @@ function LancamentoItem({ lancamento: l, todoLanc, onDelete }) {
           ${isEntrada ? 'text-green-deep' : 'text-danger'}`}>
           {isEntrada ? '+' : '-'}{formatCurrency(Math.abs(Number(l.valor)))}
         </span>
+        <button
+          onClick={onEdit}
+          className="p-1.5 rounded-lg text-text-muted hover:text-green-deep hover:bg-green-pale transition-colors"
+        >
+          <Pencil size={14} />
+        </button>
         <button
           onClick={onDelete}
           className="p-1.5 rounded-lg text-text-muted hover:text-danger hover:bg-red-50 transition-colors"
