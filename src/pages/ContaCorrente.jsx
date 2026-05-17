@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useSaldoCC } from '../hooks/useSaldoCC'
 import { Trash2, Layers, Pencil } from 'lucide-react'
 import { useContas } from '../hooks/useContas'
 import { useLancamentos } from '../hooks/useLancamentos'
@@ -92,22 +93,20 @@ export function ContaCorrente() {
     return lancamentos.filter(l => l.conta_id === contaId)
   }
 
-  function saldoConta(ls) {
-    return ls.reduce((acc, l) => {
-      if (l.tipo === 'entrada') return acc + Number(l.valor)
-      if (l.tipo === 'saida') return acc - Number(l.valor)
-      if (l.tipo === 'transferencia') {
-        const isEntrada = lancamentos.some(
-          lp => lp.id === l.transferencia_par_id && lp.conta_id !== l.conta_id
-        )
-        return acc + (isEntrada ? Number(l.valor) : -Number(l.valor))
-      }
-      return acc
-    }, 0)
-  }
-
   const itauLanc = contaItau ? lancamentosDaConta(contaItau.id) : []
   const interLanc = contaInter ? lancamentosDaConta(contaInter.id) : []
+
+  const cutoffDate = useMemo(() => {
+    if (dateRange?.to) {
+      const d = dateRange.to
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+    const [y, m] = mesRef.split('-').map(Number)
+    const lastDay = new Date(y, m, 0).getDate()
+    return `${mesRef}-${String(lastDay).padStart(2, '0')}`
+  }, [mesRef, dateRange])
+
+  const { saldoItau, saldoInter, saldoConsolidado } = useSaldoCC(cutoffDate)
 
   const filtrarPeriodo = (ls) => {
     if (!dateRange?.from || !dateRange?.to) return ls
@@ -118,13 +117,11 @@ export function ContaCorrente() {
   }
 
   let allLanc = []
-  let saldo = 0
-  if (tab === 'Itaú') { allLanc = itauLanc; saldo = saldoConta(itauLanc) }
-  else if (tab === 'Inter') { allLanc = interLanc; saldo = saldoConta(interLanc) }
-  else {
-    allLanc = [...lancamentos].sort((a, b) => b.data.localeCompare(a.data))
-    saldo = saldoConta(itauLanc) + saldoConta(interLanc)
-  }
+  if (tab === 'Itaú') allLanc = itauLanc
+  else if (tab === 'Inter') allLanc = interLanc
+  else allLanc = [...lancamentos].sort((a, b) => b.data.localeCompare(a.data))
+
+  const saldo = tab === 'Itaú' ? saldoItau : tab === 'Inter' ? saldoInter : saldoConsolidado
 
   const visibleLanc = filtrarPeriodo(allLanc)
   const categoriasDespesa = CATEGORIAS_DESPESA
@@ -181,7 +178,7 @@ export function ContaCorrente() {
         <Card className="mb-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-xs text-text-muted uppercase tracking-wide mb-1">Saldo do mês</p>
+              <p className="text-xs text-text-muted uppercase tracking-wide mb-1">Saldo</p>
               <p className={`font-mono font-bold text-2xl ${saldo >= 0 ? 'text-green-deep' : 'text-danger'}`}>
                 {formatCurrency(saldo)}
               </p>

@@ -46,7 +46,10 @@ export function useCartao(faturaRef) {
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['gastos_cartao'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gastos_cartao'] })
+      qc.invalidateQueries({ queryKey: ['saldo_mesada'] })
+    },
   })
 
   const deleteGasto = useMutation({
@@ -54,7 +57,10 @@ export function useCartao(faturaRef) {
       const { error } = await supabase.from('gastos_cartao').delete().eq('id', id)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['gastos_cartao'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gastos_cartao'] })
+      qc.invalidateQueries({ queryKey: ['saldo_mesada'] })
+    },
   })
 
   const saveConfig = useMutation({

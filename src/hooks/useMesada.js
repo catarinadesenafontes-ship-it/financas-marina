@@ -8,9 +8,37 @@ function monthDateRange(mesRef) {
   return { from: `${mesRef}-01`, to: `${mesRef}-${String(lastDay).padStart(2, '0')}` }
 }
 
+function lastDayOf(mesRef) {
+  const [y, m] = mesRef.split('-').map(Number)
+  const d = new Date(y, m, 0).getDate()
+  return `${mesRef}-${String(d).padStart(2, '0')}`
+}
+
 export function useMesada(mesRef) {
   const { user } = useAuth()
   const qc = useQueryClient()
+
+  const cutoffDate = lastDayOf(mesRef)
+
+  const saldoAcumQuery = useQuery({
+    queryKey: ['saldo_mesada', user?.id, cutoffDate],
+    queryFn: async () => {
+      const [cc, cartao] = await Promise.all([
+        supabase.from('lancamentos_cc').select('tipo, valor')
+          .eq('user_id', user.id).eq('origem', 'ajuda_de_custo').lte('data', cutoffDate),
+        supabase.from('gastos_cartao').select('valor')
+          .eq('user_id', user.id).eq('origem', 'ajuda_de_custo').lte('data', cutoffDate),
+      ])
+      const lanc = cc.data ?? []
+      const gastos = cartao.data ?? []
+      const recebido = lanc.filter(l => l.tipo === 'entrada').reduce((s, l) => s + Number(l.valor), 0)
+      const gasto = lanc.filter(l => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0)
+        + gastos.reduce((s, g) => s + Number(g.valor), 0)
+      return recebido - gasto
+    },
+    enabled: !!user && !!mesRef,
+    staleTime: 1000 * 30,
+  })
 
   const query = useQuery({
     queryKey: ['mesada_ajuda', user?.id, mesRef],
@@ -52,6 +80,8 @@ export function useMesada(mesRef) {
       qc.invalidateQueries({ queryKey: ['mesada_ajuda'] })
       qc.invalidateQueries({ queryKey: ['lancamentos'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['saldo_cc'] })
+      qc.invalidateQueries({ queryKey: ['saldo_mesada'] })
     },
   })
 
@@ -64,6 +94,7 @@ export function useMesada(mesRef) {
       qc.invalidateQueries({ queryKey: ['mesada_ajuda'] })
       qc.invalidateQueries({ queryKey: ['gastos_cartao'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['saldo_mesada'] })
     },
   })
 
@@ -99,6 +130,7 @@ export function useMesada(mesRef) {
     totalRecebido,
     totalGasto,
     saldo: totalRecebido - totalGasto,
+    saldoAcumulado: saldoAcumQuery.data ?? 0,
     isLoading: query.isLoading,
     deleteLancamento: deleteLancamento.mutateAsync,
     deleteGasto: deleteGasto.mutateAsync,

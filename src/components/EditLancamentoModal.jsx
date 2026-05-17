@@ -70,6 +70,8 @@ export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onEr
       qc.invalidateQueries({ queryKey: ['insights'] })
       qc.invalidateQueries({ queryKey: ['relatorio_cc'] })
       qc.invalidateQueries({ queryKey: ['dashboard_6m'] })
+      qc.invalidateQueries({ queryKey: ['saldo_cc'] })
+      qc.invalidateQueries({ queryKey: ['saldo_mesada'] })
 
       onSuccess()
       onClose()

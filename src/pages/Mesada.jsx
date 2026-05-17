@@ -18,7 +18,7 @@ export function Mesada() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const { toast, showSuccess, showError, hideToast } = useToast()
 
-  const { allItems, totalRecebido, totalGasto, saldo, isLoading, deleteLancamento, deleteGasto } = useMesada(mesRef)
+  const { allItems, totalRecebido, totalGasto, saldoAcumulado, isLoading, deleteLancamento, deleteGasto } = useMesada(mesRef)
 
   async function handleDelete() {
     if (!deleteTarget) return
@@ -65,8 +65,8 @@ export function Mesada() {
             </div>
             <div>
               <p className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Saldo</p>
-              <p className={`font-mono font-bold text-base ${saldo >= 0 ? 'text-green-mid' : 'text-danger'}`}>
-                {formatCurrency(saldo)}
+              <p className={`font-mono font-bold text-base ${saldoAcumulado >= 0 ? 'text-green-mid' : 'text-danger'}`}>
+                {formatCurrency(saldoAcumulado)}
               </p>
             </div>
           </div>

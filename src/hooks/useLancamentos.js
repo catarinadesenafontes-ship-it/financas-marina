@@ -41,7 +41,11 @@ export function useLancamentos(mesRef) {
       if (error) throw error
       return data
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['lancamentos'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lancamentos'] })
+      qc.invalidateQueries({ queryKey: ['saldo_cc'] })
+      qc.invalidateQueries({ queryKey: ['saldo_mesada'] })
+    },
   })
 
   const deleteMutation = useMutation({
@@ -61,7 +65,11 @@ export function useLancamentos(mesRef) {
         .in('id', ids)
       if (error) throw error
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['lancamentos'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lancamentos'] })
+      qc.invalidateQueries({ queryKey: ['saldo_cc'] })
+      qc.invalidateQueries({ queryKey: ['saldo_mesada'] })
+    },
   })
 
   return {

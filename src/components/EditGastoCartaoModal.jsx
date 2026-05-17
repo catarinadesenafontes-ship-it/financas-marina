@@ -47,6 +47,7 @@ export function EditGastoCartaoModal({ open, onClose, gasto, onSuccess, onError 
       qc.invalidateQueries({ queryKey: ['mesada_ajuda'] })
       qc.invalidateQueries({ queryKey: ['insights'] })
       qc.invalidateQueries({ queryKey: ['relatorio_cartao'] })
+      qc.invalidateQueries({ queryKey: ['saldo_mesada'] })
 
       onSuccess()
       onClose()
