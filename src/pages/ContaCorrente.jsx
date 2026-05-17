@@ -24,7 +24,7 @@ const FORMAS_PAGAMENTO = ['Pix', 'Espécie']
 
 export function ContaCorrente() {
   const { user } = useAuth()
-  const [tab, setTab] = useState('Itaú')
+  const [tab, setTab] = useState('Inter')
   const [mesRef, setMesRef] = useState(currentMonthRef)
   const [dateRange, setDateRange] = useState(undefined)
   const [modal, setModal] = useState(false)
@@ -136,20 +136,20 @@ export function ContaCorrente() {
         <div className="flex gap-1 bg-cream-dark p-1 rounded-xl mb-4">
           {[
             {
-              key: 'Itaú',
-              label: (
-                <span className="flex items-center justify-center gap-1.5">
-                  <span className="w-5 h-5 rounded-md flex items-center justify-center text-white font-bold italic text-xs" style={{ background: '#EC7000' }}>i</span>
-                  Itaú
-                </span>
-              ),
-            },
-            {
               key: 'Inter',
               label: (
                 <span className="flex items-center justify-center gap-1.5">
                   <span className="w-5 h-5 rounded-full flex items-center justify-center text-white font-bold italic text-xs" style={{ background: '#FF6600' }}>i</span>
                   Inter
+                </span>
+              ),
+            },
+            {
+              key: 'Itaú',
+              label: (
+                <span className="flex items-center justify-center gap-1.5">
+                  <span className="w-5 h-5 rounded-md flex items-center justify-center text-white font-bold italic text-xs" style={{ background: '#EC7000' }}>i</span>
+                  Itaú
                 </span>
               ),
             },
