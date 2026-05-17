@@ -22,3 +22,5 @@ export const CATEGORIAS_RECEITA = [
 ]
 
 export const CATEGORIAS_ALL = [...new Set([...CATEGORIAS_DESPESA, ...CATEGORIAS_RECEITA])].sort()
+
+export const CATEGORIAS_OCULTAS_ANALISES = ['Saldo Histórico']

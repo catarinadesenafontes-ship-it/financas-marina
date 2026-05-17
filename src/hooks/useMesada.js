@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
+import { CATEGORIAS_OCULTAS_ANALISES } from '../utils/categorias'
 
 function monthDateRange(mesRef) {
   const [y, m] = mesRef.split('-').map(Number)
@@ -98,7 +99,7 @@ export function useMesada(mesRef) {
     },
   })
 
-  const lancamentos = query.data?.lancamentos ?? []
+  const lancamentos = (query.data?.lancamentos ?? []).filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria))
   const gastos_cartao = query.data?.gastos_cartao ?? []
 
   const totalRecebido = lancamentos

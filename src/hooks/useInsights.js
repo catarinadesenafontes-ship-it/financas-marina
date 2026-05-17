@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { currentMonthRef } from '../utils/formatDate'
+import { CATEGORIAS_OCULTAS_ANALISES } from '../utils/categorias'
 
 function getMonthRef(offset = 0) {
   const d = new Date()
@@ -73,12 +74,13 @@ export function useInsights() {
       return map
     }
 
-    const { lancamentos: lAtual, gastos_cartao: gcAtual } = mesAtual
+    const { lancamentos: lAtualRaw, gastos_cartao: gcAtual } = mesAtual
+    const lAtual = lAtualRaw.filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria))
 
     const totalGastos = totalGastosMes(lAtual, gcAtual)
     const totalReceitas = totalReceitasMes(lAtual)
     const catAtual = gastoPorCat(lAtual, gcAtual)
-    const catAnterior = gastoPorCat(mes1.lancamentos, mes1.gastos_cartao)
+    const catAnterior = gastoPorCat(mes1.lancamentos.filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria)), mes1.gastos_cartao)
     const totalLancamentosMes = lAtual.length + gcAtual.length
 
     // Dados insuficientes
@@ -217,9 +219,9 @@ export function useInsights() {
     }
 
     // --- EVOLUÇÃO ---
-    const g0 = totalGastosMes(mes3.lancamentos, mes3.gastos_cartao)
-    const g1 = totalGastosMes(mes2.lancamentos, mes2.gastos_cartao)
-    const g2 = totalGastosMes(mes1.lancamentos, mes1.gastos_cartao)
+    const g0 = totalGastosMes(mes3.lancamentos.filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria)), mes3.gastos_cartao)
+    const g1 = totalGastosMes(mes2.lancamentos.filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria)), mes2.gastos_cartao)
+    const g2 = totalGastosMes(mes1.lancamentos.filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria)), mes1.gastos_cartao)
     const media3 = (g0 + g1 + g2) / 3
 
     if (media3 > 0) {

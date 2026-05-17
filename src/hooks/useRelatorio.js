@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
+import { CATEGORIAS_OCULTAS_ANALISES } from '../utils/categorias'
 
 export function useRelatorio(dateFrom, dateTo, modulo, origem) {
   const { user } = useAuth()
@@ -47,13 +48,13 @@ export function useRelatorio(dateFrom, dateTo, modulo, origem) {
 
   const isLoading = lancamentosQuery.isLoading || cartaoQuery.isLoading
 
-  const allLancamentos = lancamentosQuery.data ?? []
+  const rawLancamentos = (lancamentosQuery.data ?? []).filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria))
   const allGastosCartao = cartaoQuery.data ?? []
 
   // Apply origem filter client-side (raw data always full, for export)
   const lancamentos = origem && origem !== 'tudo'
-    ? allLancamentos.filter(l => l.origem === origem)
-    : allLancamentos
+    ? rawLancamentos.filter(l => l.origem === origem)
+    : rawLancamentos
 
   const gastos_cartao = origem && origem !== 'tudo'
     ? allGastosCartao.filter(g => g.origem === origem)
@@ -107,6 +108,6 @@ export function useRelatorio(dateFrom, dateTo, modulo, origem) {
     receitas,
     totalDespesas,
     totalReceitas,
-    raw: { lancamentos: allLancamentos, gastos_cartao: allGastosCartao },
+    raw: { lancamentos: rawLancamentos, gastos_cartao: allGastosCartao },
   }
 }
