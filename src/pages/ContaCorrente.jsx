@@ -1,9 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Trash2, Layers } from 'lucide-react'
-import { supabase } from '../lib/supabase'
 import { useContas } from '../hooks/useContas'
 import { useLancamentos } from '../hooks/useLancamentos'
-import { useCartao } from '../hooks/useCartao'
 import { useAuth } from '../hooks/useAuth'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
@@ -19,8 +17,7 @@ import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
 import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
 
-const TABS = ['Itaú', 'Inter', 'Consolidado']
-const FORMAS_PAGAMENTO = ['Pix', 'Espécie', 'Cartão de Crédito']
+const FORMAS_PAGAMENTO = ['Pix', 'Espécie']
 
 export function ContaCorrente() {
   const { user } = useAuth()
@@ -33,7 +30,6 @@ export function ContaCorrente() {
 
   const { contas, contaItau, contaInter } = useContas()
   const { lancamentos, isLoading, add, remove, isAdding, isRemoving } = useLancamentos(mesRef)
-  const { addGasto: addGastoCartao, config: configCartao } = useCartao(currentMonthRef())
 
   function emptyForm() {
     return {
@@ -45,6 +41,7 @@ export function ContaCorrente() {
       descricao: '',
       data: new Date().toISOString().split('T')[0],
       categoria: CATEGORIAS_DESPESA[0],
+      origem: 'marina',
       contaOrigemId: '',
       contaDestinoId: '',
     }
@@ -68,30 +65,7 @@ export function ContaCorrente() {
           data: form.data,
           categoria: null,
         })
-      } else if (form.tipo === 'saida' && form.forma_pagamento === 'Cartão de Crédito') {
-        // Cria o gasto no cartão
-        await addGastoCartao({
-          valor,
-          descricao: form.descricao,
-          data: form.data,
-          categoria: form.categoria,
-        })
-        // Cria também a saída na CC vinculada ao cartão
-        const bancoCartao = configCartao?.banco ?? 'Itaú'
-        const contaCartao = contas.find(c => c.nome === bancoCartao)
-        if (contaCartao) {
-          await add({
-            conta_id: contaCartao.id,
-            tipo: 'saida',
-            valor,
-            descricao: form.descricao,
-            data: form.data,
-            categoria: form.categoria,
-            forma_pagamento: 'Cartão de Crédito',
-          })
-        }
       } else {
-        // Pix ou Espécie: define conta pelo banco selecionado
         const contaSelecionada = contas.find(c => c.nome === form.banco)
         await add({
           conta_id: contaSelecionada?.id || contaItau?.id,
@@ -101,6 +75,7 @@ export function ContaCorrente() {
           data: form.data,
           categoria: form.categoria,
           forma_pagamento: form.tipo === 'saida' ? form.forma_pagamento : null,
+          origem: form.origem,
         })
       }
       resetModal()
@@ -269,7 +244,7 @@ export function ContaCorrente() {
             </Select>
           )}
 
-          {/* Banco — para Pix/Espécie (saída/entrada) ou transferência */}
+          {/* Banco ou contas de transferência */}
           {form.tipo === 'transferencia' ? (
             <>
               <Select
@@ -291,7 +266,7 @@ export function ContaCorrente() {
                 {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </Select>
             </>
-          ) : form.tipo === 'entrada' || (form.tipo === 'saida' && form.forma_pagamento !== 'Cartão de Crédito') ? (
+          ) : (
             <Select
               label="Banco"
               value={form.banco}
@@ -300,7 +275,7 @@ export function ContaCorrente() {
               <option>Itaú</option>
               <option>Inter</option>
             </Select>
-          ) : null}
+          )}
 
           <Input
             label="Valor (R$)"
@@ -338,6 +313,17 @@ export function ContaCorrente() {
             >
               {(form.tipo === 'entrada' ? categoriasReceita : categoriasDespesa)
                 .map(c => <option key={c}>{c}</option>)}
+            </Select>
+          )}
+
+          {form.tipo !== 'transferencia' && (
+            <Select
+              label="Origem do recurso"
+              value={form.origem}
+              onChange={e => setForm(f => ({ ...f, origem: e.target.value }))}
+            >
+              <option value="marina">👩 Marina</option>
+              <option value="ajuda_de_custo">💼 Ajuda de custo</option>
             </Select>
           )}
 
@@ -398,6 +384,11 @@ function LancamentoItem({ lancamento: l, todoLanc, onDelete }) {
           {formaPag && (
             <span className="text-[10px] text-text-muted bg-cream px-1.5 py-0.5 rounded">
               {formaPag}
+            </span>
+          )}
+          {l.origem === 'ajuda_de_custo' && (
+            <span className="text-[10px] text-green-deep bg-green-pale px-1.5 py-0.5 rounded">
+              💼 Ajuda
             </span>
           )}
         </div>

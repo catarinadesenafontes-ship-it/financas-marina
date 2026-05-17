@@ -18,7 +18,7 @@ function useDashboardData() {
   return useQuery({
     queryKey: ['dashboard', user?.id, mesRef],
     queryFn: async () => {
-      const [lancamentos, cartao, mesada, contas] = await Promise.all([
+      const [lancamentos, cartao, contas] = await Promise.all([
         supabase
           .from('lancamentos_cc')
           .select('*, contas(nome)')
@@ -29,11 +29,6 @@ function useDashboardData() {
           .eq('user_id', user.id)
           .eq('fatura_mes', mesRef),
         supabase
-          .from('mesada')
-          .select('valor')
-          .eq('user_id', user.id)
-          .eq('mes_referencia', mesRef),
-        supabase
           .from('contas')
           .select('id, nome')
           .eq('user_id', user.id),
@@ -42,7 +37,6 @@ function useDashboardData() {
       return {
         lancamentos: lancamentos.data ?? [],
         cartaoMes: cartao.data ?? [],
-        mesadaMes: mesada.data ?? [],
         contas: contas.data ?? [],
       }
     },
@@ -117,6 +111,7 @@ export function Dashboard() {
   const { data, isLoading } = useDashboardData()
   const { data: seis } = useSeis()
   const { contas: contasInfo } = useContas()
+  const mesRef = currentMonthRef()
 
   const saldos = useMemo(() => {
     if (!data) return { itau: 0, inter: 0 }
@@ -147,10 +142,11 @@ export function Dashboard() {
   const faturaAberta = useMemo(() =>
     (data?.cartaoMes ?? []).reduce((s, g) => s + Number(g.valor), 0), [data])
 
-  const saldoMesada = useMemo(() => {
-    const recebido = (data?.mesadaMes ?? []).reduce((s, r) => s + Number(r.valor), 0)
-    return recebido
-  }, [data])
+  const ajudaRecebida = useMemo(() => {
+    return (data?.lancamentos ?? [])
+      .filter(l => l.tipo === 'entrada' && l.origem === 'ajuda_de_custo' && l.data >= `${mesRef}-01` && l.data <= `${mesRef}-31`)
+      .reduce((s, l) => s + Number(l.valor), 0)
+  }, [data, mesRef])
 
   const graficoData = useMemo(() =>
     (seis ?? []).map(row => ({
@@ -191,8 +187,8 @@ export function Dashboard() {
             color="text-warning"
           />
           <SummaryCard
-            label="Mesada recebida"
-            value={saldoMesada}
+            label="Ajuda de custo"
+            value={ajudaRecebida}
             color="text-green-mid"
           />
         </div>

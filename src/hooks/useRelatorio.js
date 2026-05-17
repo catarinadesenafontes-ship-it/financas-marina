@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
-export function useRelatorio(dateFrom, dateTo, modulo) {
+export function useRelatorio(dateFrom, dateTo, modulo, origem) {
   const { user } = useAuth()
 
   const enabled = !!user && !!dateFrom && !!dateTo
@@ -45,75 +45,37 @@ export function useRelatorio(dateFrom, dateTo, modulo) {
     staleTime: 1000 * 60,
   })
 
-  const mesadaRecQuery = useQuery({
-    queryKey: ['relatorio_mesada_rec', user?.id, from, to],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('mesada')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('data', from)
-        .lte('data', to)
-        .order('data', { ascending: false })
-      if (error) throw error
-      return data ?? []
-    },
-    enabled: enabled && (modulo === 'Tudo' || modulo === 'Mesada'),
-    staleTime: 1000 * 60,
-  })
+  const isLoading = lancamentosQuery.isLoading || cartaoQuery.isLoading
 
-  const mesadaGastoQuery = useQuery({
-    queryKey: ['relatorio_mesada_gasto', user?.id, from, to],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('gastos_mesada')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('data', from)
-        .lte('data', to)
-        .order('data', { ascending: false })
-      if (error) throw error
-      return data ?? []
-    },
-    enabled: enabled && (modulo === 'Tudo' || modulo === 'Mesada'),
-    staleTime: 1000 * 60,
-  })
+  const allLancamentos = lancamentosQuery.data ?? []
+  const allGastosCartao = cartaoQuery.data ?? []
 
-  const isLoading = lancamentosQuery.isLoading || cartaoQuery.isLoading ||
-    mesadaRecQuery.isLoading || mesadaGastoQuery.isLoading
+  // Apply origem filter client-side (raw data always full, for export)
+  const lancamentos = origem && origem !== 'tudo'
+    ? allLancamentos.filter(l => l.origem === origem)
+    : allLancamentos
 
-  const lancamentos = lancamentosQuery.data ?? []
-  const gastos_cartao = cartaoQuery.data ?? []
-  const mesada_rec = mesadaRecQuery.data ?? []
-  const mesada_gasto = mesadaGastoQuery.data ?? []
+  const gastos_cartao = origem && origem !== 'tudo'
+    ? allGastosCartao.filter(g => g.origem === origem)
+    : allGastosCartao
 
   // Agrupa despesas por categoria
   const despesasMap = {}
 
-  // Saídas da CC (exclui transferências)
   lancamentos
     .filter(l => l.tipo === 'saida')
     .forEach(l => {
       const cat = l.categoria ?? 'Outros'
       if (!despesasMap[cat]) despesasMap[cat] = { total: 0, items: [] }
       despesasMap[cat].total += Number(l.valor)
-      despesasMap[cat].items.push({ ...l, fonte: 'CC', banco: l.contas?.nome })
+      despesasMap[cat].items.push({ ...l, fonte: l.contas?.nome ?? 'CC' })
     })
 
-  // Gastos do cartão
   gastos_cartao.forEach(g => {
     const cat = g.categoria ?? 'Outros'
     if (!despesasMap[cat]) despesasMap[cat] = { total: 0, items: [] }
     despesasMap[cat].total += Number(g.valor)
     despesasMap[cat].items.push({ ...g, fonte: 'Cartão' })
-  })
-
-  // Gastos da mesada
-  mesada_gasto.forEach(g => {
-    const cat = 'Mesada'
-    if (!despesasMap[cat]) despesasMap[cat] = { total: 0, items: [] }
-    despesasMap[cat].total += Number(g.valor)
-    despesasMap[cat].items.push({ ...g, fonte: 'Mesada' })
   })
 
   // Agrupa receitas por categoria
@@ -125,15 +87,8 @@ export function useRelatorio(dateFrom, dateTo, modulo) {
       const cat = l.categoria ?? 'Receita'
       if (!receitasMap[cat]) receitasMap[cat] = { total: 0, items: [] }
       receitasMap[cat].total += Number(l.valor)
-      receitasMap[cat].items.push({ ...l, fonte: 'CC', banco: l.contas?.nome })
+      receitasMap[cat].items.push({ ...l, fonte: l.contas?.nome ?? 'CC' })
     })
-
-  mesada_rec.forEach(r => {
-    const cat = 'Mesada Família'
-    if (!receitasMap[cat]) receitasMap[cat] = { total: 0, items: [] }
-    receitasMap[cat].total += Number(r.valor)
-    receitasMap[cat].items.push({ ...r, fonte: 'Mesada', descricao: r.origem })
-  })
 
   const despesas = Object.entries(despesasMap)
     .map(([cat, data]) => ({ categoria: cat, ...data }))
@@ -152,7 +107,6 @@ export function useRelatorio(dateFrom, dateTo, modulo) {
     receitas,
     totalDespesas,
     totalReceitas,
-    // Raw data for Excel export
-    raw: { lancamentos, gastos_cartao, mesada_rec, mesada_gasto },
+    raw: { lancamentos: allLancamentos, gastos_cartao: allGastosCartao },
   }
 }

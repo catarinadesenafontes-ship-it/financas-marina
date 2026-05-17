@@ -15,7 +15,12 @@ import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate } from '../utils/formatDate'
 import 'react-day-picker/style.css'
 
-const MODULOS = ['Tudo', 'Conta-Corrente', 'Cartão', 'Mesada']
+const MODULOS = ['Tudo', 'Conta-Corrente', 'Cartão']
+const ORIGENS = [
+  { value: 'tudo', label: 'Tudo' },
+  { value: 'ajuda_de_custo', label: '💼 Ajuda de custo' },
+  { value: 'marina', label: '👩 Marina' },
+]
 
 const CORES_BARRAS = [
   '#1A3D2B','#2D5C3E','#7EC8A4','#C8E6D8',
@@ -30,9 +35,10 @@ export function Relatorio() {
   })
   const [pickerOpen, setPickerOpen] = useState(false)
   const [modulo, setModulo] = useState('Tudo')
+  const [origem, setOrigem] = useState('tudo')
 
   const { isLoading, despesas, receitas, totalDespesas, totalReceitas, raw } =
-    useRelatorio(dateRange?.from, dateRange?.to, modulo)
+    useRelatorio(dateRange?.from, dateRange?.to, modulo, origem)
 
   const rangeLabel = dateRange?.from && dateRange?.to
     ? `${format(dateRange.from, 'dd/MM/yyyy')} – ${format(dateRange.to, 'dd/MM/yyyy')}`
@@ -57,13 +63,14 @@ export function Relatorio() {
     // Aba Conta-Corrente
     if (raw.lancamentos.length > 0) {
       const ccRows = [
-        ['Data', 'Descrição', 'Categoria', 'Forma Pagamento', 'Banco', 'Valor', 'Tipo'],
+        ['Data', 'Descrição', 'Categoria', 'Forma Pagamento', 'Banco', 'Origem', 'Valor', 'Tipo'],
         ...raw.lancamentos.map(l => [
           l.data,
           l.descricao,
           l.categoria ?? '',
           l.forma_pagamento ?? '',
           l.contas?.nome ?? '',
+          l.origem ?? 'marina',
           Number(l.valor),
           l.tipo,
         ]),
@@ -74,22 +81,28 @@ export function Relatorio() {
     // Aba Cartão
     if (raw.gastos_cartao.length > 0) {
       const cartaoRows = [
-        ['Data', 'Descrição', 'Categoria', 'Fatura', 'Valor'],
+        ['Data', 'Descrição', 'Categoria', 'Fatura', 'Origem', 'Valor'],
         ...raw.gastos_cartao.map(g => [
-          g.data, g.descricao, g.categoria ?? '', g.fatura_mes, Number(g.valor),
+          g.data, g.descricao, g.categoria ?? '', g.fatura_mes, g.origem ?? 'marina', Number(g.valor),
         ]),
       ]
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cartaoRows), 'Cartão')
     }
 
-    // Aba Mesada
-    const mesadaRows = [
-      ['Data', 'Descrição / Origem', 'Valor', 'Tipo'],
-      ...raw.mesada_rec.map(r => [r.data, r.origem, Number(r.valor), 'Recebimento']),
-      ...raw.mesada_gasto.map(g => [g.data, g.descricao, Number(g.valor), 'Gasto']),
-    ]
-    if (mesadaRows.length > 1) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mesadaRows), 'Mesada')
+    // Aba Ajuda de Custo (sempre inclui todos os itens com origem=ajuda_de_custo)
+    const ajudaCC = raw.lancamentos.filter(l => l.origem === 'ajuda_de_custo')
+    const ajudaCartao = raw.gastos_cartao.filter(g => g.origem === 'ajuda_de_custo')
+    if (ajudaCC.length > 0 || ajudaCartao.length > 0) {
+      const ajudaRows = [
+        ['Data', 'Descrição', 'Categoria', 'Fonte', 'Valor', 'Tipo'],
+        ...ajudaCC.map(l => [
+          l.data, l.descricao, l.categoria ?? '', l.contas?.nome ?? 'CC', Number(l.valor), l.tipo === 'entrada' ? 'Recebimento' : 'Gasto',
+        ]),
+        ...ajudaCartao.map(g => [
+          g.data, g.descricao, g.categoria ?? '', 'Cartão', Number(g.valor), 'Gasto',
+        ]),
+      ]
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ajudaRows), 'Ajuda de Custo')
     }
 
     const nomeArquivo = `financas-marina-${format(new Date(), 'yyyy-MM-dd')}.xlsx`
@@ -136,9 +149,10 @@ export function Relatorio() {
               )}
             </div>
 
-            {/* Módulo + Exportar */}
-            <div className="flex gap-2">
-              <div className="flex gap-1 flex-1 bg-cream-dark p-1 rounded-xl">
+            {/* Módulo */}
+            <div>
+              <p className="text-xs text-text-muted uppercase tracking-wide mb-1.5">Módulo</p>
+              <div className="flex gap-1 bg-cream-dark p-1 rounded-xl">
                 {MODULOS.map(m => (
                   <button
                     key={m}
@@ -150,11 +164,30 @@ export function Relatorio() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Origem + Exportar */}
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <p className="text-xs text-text-muted uppercase tracking-wide mb-1.5">Origem</p>
+                <div className="flex gap-1 bg-cream-dark p-1 rounded-xl">
+                  {ORIGENS.map(o => (
+                    <button
+                      key={o.value}
+                      onClick={() => setOrigem(o.value)}
+                      className={`flex-1 py-1.5 text-[10px] font-medium rounded-lg transition-colors
+                        ${origem === o.value ? 'bg-surface text-green-deep shadow-sm' : 'text-text-muted'}`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <Button
                 variant="secondary"
                 onClick={exportarExcel}
                 disabled={isLoading || (despesas.length === 0 && receitas.length === 0)}
-                className="gap-1.5 text-xs px-3 py-2 h-auto self-center"
+                className="gap-1.5 text-xs px-3 py-2 h-auto self-end mb-1"
               >
                 <Download size={14} />
                 Excel

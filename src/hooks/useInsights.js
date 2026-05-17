@@ -17,15 +17,13 @@ function monthDateRange(mesRef) {
 
 async function fetchMesData(userId, mesRef) {
   const { from, to } = monthDateRange(mesRef)
-  const [cc, cartao, mesadaRec] = await Promise.all([
-    supabase.from('lancamentos_cc').select('valor,tipo,categoria,data').eq('user_id', userId).gte('data', from).lte('data', to),
+  const [cc, cartao] = await Promise.all([
+    supabase.from('lancamentos_cc').select('valor,tipo,categoria,data,origem').eq('user_id', userId).gte('data', from).lte('data', to),
     supabase.from('gastos_cartao').select('valor,categoria,data').eq('user_id', userId).eq('fatura_mes', mesRef),
-    supabase.from('mesada').select('valor,data').eq('user_id', userId).eq('mes_referencia', mesRef),
   ])
   return {
     lancamentos: cc.data ?? [],
     gastos_cartao: cartao.data ?? [],
-    mesada_rec: mesadaRec.data ?? [],
   }
 }
 
@@ -75,10 +73,10 @@ export function useInsights() {
       return map
     }
 
-    const { lancamentos: lAtual, gastos_cartao: gcAtual, mesada_rec: mRecAtual } = mesAtual
+    const { lancamentos: lAtual, gastos_cartao: gcAtual } = mesAtual
 
     const totalGastos = totalGastosMes(lAtual, gcAtual)
-    const totalReceitas = totalReceitasMes(lAtual) + mRecAtual.reduce((s, r) => s + Number(r.valor), 0)
+    const totalReceitas = totalReceitasMes(lAtual)
     const catAtual = gastoPorCat(lAtual, gcAtual)
     const catAnterior = gastoPorCat(mes1.lancamentos, mes1.gastos_cartao)
     const totalLancamentosMes = lAtual.length + gcAtual.length
@@ -185,7 +183,7 @@ export function useInsights() {
       })
     }
 
-    // --- SALDO E MESADA ---
+    // --- SALDO ---
     if (totalReceitas > 0) {
       const saldoRestante = totalReceitas - totalGastos
       const pctSaldo = pct(saldoRestante, totalReceitas)
@@ -207,13 +205,14 @@ export function useInsights() {
       }
     }
 
-    // Mesada não registrada até dia 10
-    if (diaHoje > 10 && mRecAtual.length === 0) {
+    // Ajuda de custo não registrada até dia 10
+    const temAjudaEntrada = lAtual.some(l => l.tipo === 'entrada' && l.origem === 'ajuda_de_custo')
+    if (diaHoje > 10 && !temAjudaEntrada) {
       insights.push({
         type: 'warning',
         emoji: '💰',
-        title: 'Mesada não registrada',
-        message: 'Você ainda não registrou o recebimento da mesada este mês. Não esqueça de lançar!',
+        title: 'Ajuda de custo não registrada',
+        message: 'Você ainda não registrou o recebimento da ajuda de custo este mês. Não esqueça de lançar!',
       })
     }
 

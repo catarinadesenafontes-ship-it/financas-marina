@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Trash2, CreditCard } from 'lucide-react'
 import { useCartao } from '../hooks/useCartao'
-import { useLancamentos } from '../hooks/useLancamentos'
-import { useContas } from '../hooks/useContas'
 import { Card } from '../components/Card'
 import { Button } from '../components/Button'
 import { FAB } from '../components/FAB'
@@ -25,8 +23,6 @@ export function Cartao() {
   const [form, setForm] = useState(emptyForm())
 
   const { gastos, totalGasto, limite, disponivel, config, melhorDiaCompra, isLoading, addGasto, deleteGasto, isAdding } = useCartao(faturaRef)
-  const { add: addLancamento } = useLancamentos(currentMonthRef())
-  const { contas } = useContas()
 
   const bancoCartao = config?.banco ?? 'Itaú'
 
@@ -36,6 +32,7 @@ export function Cartao() {
       descricao: '',
       data: new Date().toISOString().split('T')[0],
       categoria: CATEGORIAS_DESPESA[0],
+      origem: 'marina',
     }
   }
 
@@ -46,22 +43,13 @@ export function Cartao() {
     const valor = parseFloat(form.valor.replace(',', '.'))
     if (!valor || valor <= 0) return
     try {
-      // Registra no cartão
-      await addGasto({ valor, descricao: form.descricao, data: form.data, categoria: form.categoria })
-
-      // Registra saída na CC do banco vinculado ao cartão
-      const contaVinculada = contas.find(c => c.nome === bancoCartao)
-      if (contaVinculada) {
-        await addLancamento({
-          conta_id: contaVinculada.id,
-          tipo: 'saida',
-          valor,
-          descricao: form.descricao,
-          data: form.data,
-          categoria: form.categoria,
-          forma_pagamento: 'Cartão de Crédito',
-        })
-      }
+      await addGasto({
+        valor,
+        descricao: form.descricao,
+        data: form.data,
+        categoria: form.categoria,
+        origem: form.origem,
+      })
       resetModal()
     } catch (err) {
       console.error(err)
@@ -166,6 +154,11 @@ export function Cartao() {
                           {g.categoria}
                         </span>
                       )}
+                      {g.origem === 'ajuda_de_custo' && (
+                        <span className="text-[10px] text-green-deep bg-green-pale px-1.5 py-0.5 rounded">
+                          💼 Ajuda
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -190,9 +183,6 @@ export function Cartao() {
 
       <Modal open={modal} onClose={resetModal} title="Registrar Gasto no Cartão">
         <form onSubmit={handleAdd} className="flex flex-col gap-4">
-          <div className="bg-cream rounded-xl px-4 py-3 text-xs text-text-secondary">
-            Cartão vinculado: <strong>{bancoCartao}</strong> — o lançamento também será registrado na conta corrente.
-          </div>
           <Input
             label="Valor (R$)"
             type="number"
@@ -224,6 +214,14 @@ export function Cartao() {
             onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
           >
             {CATEGORIAS_DESPESA.map(c => <option key={c}>{c}</option>)}
+          </Select>
+          <Select
+            label="Origem do recurso"
+            value={form.origem}
+            onChange={e => setForm(f => ({ ...f, origem: e.target.value }))}
+          >
+            <option value="marina">👩 Marina</option>
+            <option value="ajuda_de_custo">💼 Ajuda de custo</option>
           </Select>
           <div className="flex gap-3 mt-2">
             <Button type="button" variant="secondary" className="flex-1" onClick={resetModal}>
