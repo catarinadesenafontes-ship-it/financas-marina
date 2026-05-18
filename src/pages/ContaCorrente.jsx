@@ -20,7 +20,7 @@ import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
 import { EditLancamentoModal } from '../components/EditLancamentoModal'
 import { Toast, useToast } from '../components/Toast'
 
-const FORMAS_PAGAMENTO = ['Pix', 'Espécie']
+const FORMAS_PAGAMENTO = ['Pix', 'Espécie', 'Débito em conta']
 
 export function ContaCorrente() {
   const { user } = useAuth()
@@ -41,7 +41,7 @@ export function ContaCorrente() {
       conta_id: '',
       tipo: 'saida',
       forma_pagamento: 'Pix',
-      banco: 'Itaú',
+      banco: 'Inter',
       valor: '',
       descricao: '',
       data: new Date().toISOString().split('T')[0],
@@ -274,8 +274,8 @@ export function ContaCorrente() {
               value={form.banco}
               onChange={e => setForm(f => ({ ...f, banco: e.target.value }))}
             >
-              <option>Itaú</option>
               <option>Inter</option>
+              <option>Itaú</option>
             </Select>
           )}
 

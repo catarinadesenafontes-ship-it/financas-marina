@@ -7,7 +7,7 @@ import { Input, Select } from './Input'
 import { Button } from './Button'
 import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
 
-const FORMAS_PAGAMENTO = ['Pix', 'Espécie']
+const FORMAS_PAGAMENTO = ['Pix', 'Espécie', 'Débito em conta']
 
 export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onError }) {
   const { contas } = useContas()
@@ -154,8 +154,8 @@ export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onEr
               value={form.banco}
               onChange={e => setForm(f => ({ ...f, banco: e.target.value }))}
             >
-              <option>Itaú</option>
               <option>Inter</option>
+              <option>Itaú</option>
             </Select>
 
             <Select
