@@ -29,6 +29,7 @@ export const CATEGORIAS_DESPESA_CONTAS = [
   'Alimentação',
   'Aplicativos',
   'Consultas',
+  'Conta TIM',
   'Cursos',
   'Eletrônicos',
   'Exames',
