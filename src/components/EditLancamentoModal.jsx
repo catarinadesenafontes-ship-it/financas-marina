@@ -5,7 +5,7 @@ import { useContas } from '../hooks/useContas'
 import { Modal } from './Modal'
 import { Input, Select } from './Input'
 import { Button } from './Button'
-import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
+import { CATEGORIAS_DESPESA_CONTAS, CATEGORIAS_RECEITA } from '../utils/categorias'
 
 const FORMAS_PAGAMENTO = ['Pix', 'Espécie', 'Débito em conta']
 
@@ -22,7 +22,7 @@ export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onEr
       descricao: lancamento.descricao ?? '',
       tipo: lancamento.tipo ?? 'saida',
       valor: String(lancamento.valor ?? ''),
-      categoria: lancamento.categoria ?? CATEGORIAS_DESPESA[0],
+      categoria: lancamento.categoria ?? CATEGORIAS_DESPESA_CONTAS[0],
       forma_pagamento: lancamento.forma_pagamento ?? 'Pix',
       banco: lancamento.contas?.nome ?? 'Itaú',
       origem: lancamento.origem ?? 'marina',
@@ -85,7 +85,7 @@ export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onEr
   if (!form) return null
 
   const isTransfer = lancamento?.tipo === 'transferencia'
-  const cats = form.tipo === 'entrada' ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA
+  const cats = form.tipo === 'entrada' ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA_CONTAS
 
   return (
     <Modal open={open} onClose={onClose} title="Editar lançamento">
@@ -103,7 +103,7 @@ export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onEr
             onChange={e => setForm(f => ({
               ...f,
               tipo: e.target.value,
-              categoria: e.target.value === 'entrada' ? CATEGORIAS_RECEITA[0] : CATEGORIAS_DESPESA[0],
+              categoria: e.target.value === 'entrada' ? CATEGORIAS_RECEITA[0] : CATEGORIAS_DESPESA_CONTAS[0],
             }))}
           >
             <option value="saida">Saída</option>

@@ -1,4 +1,4 @@
-export const CATEGORIAS_DESPESA = [
+export const CATEGORIAS_DESPESA_CARTAO = [
   'Academia',
   'Alimentação',
   'Aplicativos',
@@ -24,6 +24,36 @@ export const CATEGORIAS_DESPESA = [
   'Outros',
 ]
 
+export const CATEGORIAS_DESPESA_CONTAS = [
+  'Academia',
+  'Alimentação',
+  'Aplicativos',
+  'Consultas',
+  'Cursos',
+  'Eletrônicos',
+  'Exames',
+  'Farmácia',
+  'Fatura de cartão de crédito',
+  'Hortifruti',
+  'Ifood',
+  'Lazer',
+  'Lanches',
+  'Livros',
+  'Papelaria',
+  'Passagens aéreas',
+  'Passagens de ônibus',
+  'Presentes',
+  'Restaurantes',
+  'Supermercado',
+  'Transporte Urbano',
+  'Uber',
+  'Vestuário',
+  'Outros',
+]
+
+// Alias para compatibilidade com imports existentes não refatorados
+export const CATEGORIAS_DESPESA = CATEGORIAS_DESPESA_CARTAO
+
 export const CATEGORIAS_RECEITA = [
   'Mesada Família',
   'Outros recebimentos',
@@ -33,6 +63,6 @@ export const CATEGORIAS_RECEITA = [
   'Salário Origem',
 ]
 
-export const CATEGORIAS_ALL = [...new Set([...CATEGORIAS_DESPESA, ...CATEGORIAS_RECEITA])].sort()
+export const CATEGORIAS_ALL = [...new Set([...CATEGORIAS_DESPESA_CONTAS, ...CATEGORIAS_RECEITA])].sort()
 
 export const CATEGORIAS_OCULTAS_ANALISES = ['Saldo Histórico']

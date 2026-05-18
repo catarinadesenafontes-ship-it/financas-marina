@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Modal } from './Modal'
 import { Input, Select } from './Input'
 import { Button } from './Button'
-import { CATEGORIAS_DESPESA } from '../utils/categorias'
+import { CATEGORIAS_DESPESA_CARTAO } from '../utils/categorias'
 
 export function EditGastoCartaoModal({ open, onClose, gasto, onSuccess, onError }) {
   const qc = useQueryClient()
@@ -17,7 +17,7 @@ export function EditGastoCartaoModal({ open, onClose, gasto, onSuccess, onError 
       data: gasto.data ?? '',
       descricao: gasto.descricao ?? '',
       valor: String(gasto.valor ?? ''),
-      categoria: gasto.categoria ?? CATEGORIAS_DESPESA[0],
+      categoria: gasto.categoria ?? CATEGORIAS_DESPESA_CARTAO[0],
       origem: gasto.origem ?? 'marina',
     })
   }, [gasto])
@@ -94,7 +94,7 @@ export function EditGastoCartaoModal({ open, onClose, gasto, onSuccess, onError 
           value={form.categoria}
           onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
         >
-          {CATEGORIAS_DESPESA.map(c => <option key={c}>{c}</option>)}
+          {CATEGORIAS_DESPESA_CARTAO.map(c => <option key={c}>{c}</option>)}
         </Select>
 
         <Select

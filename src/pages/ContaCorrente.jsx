@@ -16,7 +16,7 @@ import { CategoryIcon } from '../components/CategoryIcon'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
-import { CATEGORIAS_DESPESA, CATEGORIAS_RECEITA } from '../utils/categorias'
+import { CATEGORIAS_DESPESA_CONTAS, CATEGORIAS_RECEITA } from '../utils/categorias'
 import { EditLancamentoModal } from '../components/EditLancamentoModal'
 import { Toast, useToast } from '../components/Toast'
 
@@ -45,7 +45,7 @@ export function ContaCorrente() {
       valor: '',
       descricao: '',
       data: new Date().toISOString().split('T')[0],
-      categoria: CATEGORIAS_DESPESA[0],
+      categoria: CATEGORIAS_DESPESA_CONTAS[0],
       origem: 'marina',
       contaOrigemId: '',
       contaDestinoId: '',
@@ -124,7 +124,7 @@ export function ContaCorrente() {
   const saldo = tab === 'Itaú' ? saldoItau : tab === 'Inter' ? saldoInter : saldoConsolidado
 
   const visibleLanc = filtrarPeriodo(allLanc)
-  const categoriasDespesa = CATEGORIAS_DESPESA
+  const categoriasDespesa = CATEGORIAS_DESPESA_CONTAS
   const categoriasReceita = CATEGORIAS_RECEITA
 
   return (
@@ -227,7 +227,7 @@ export function ContaCorrente() {
             onChange={e => setForm(f => ({
               ...f,
               tipo: e.target.value,
-              categoria: e.target.value === 'entrada' ? CATEGORIAS_RECEITA[0] : CATEGORIAS_DESPESA[0],
+              categoria: e.target.value === 'entrada' ? CATEGORIAS_RECEITA[0] : CATEGORIAS_DESPESA_CONTAS[0],
             }))}
           >
             <option value="saida">Saída</option>

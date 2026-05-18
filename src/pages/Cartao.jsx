@@ -15,7 +15,7 @@ import { CategoryIcon } from '../components/CategoryIcon'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
-import { CATEGORIAS_DESPESA } from '../utils/categorias'
+import { CATEGORIAS_DESPESA_CARTAO } from '../utils/categorias'
 
 export function Cartao() {
   const [faturaRef, setFaturaRef] = useState(currentMonthRef)
@@ -35,7 +35,7 @@ export function Cartao() {
       valor: '',
       descricao: '',
       data: new Date().toISOString().split('T')[0],
-      categoria: CATEGORIAS_DESPESA[0],
+      categoria: CATEGORIAS_DESPESA_CARTAO[0],
       origem: 'marina',
     }
   }
@@ -223,7 +223,7 @@ export function Cartao() {
             value={form.categoria}
             onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
           >
-            {CATEGORIAS_DESPESA.map(c => <option key={c}>{c}</option>)}
+            {CATEGORIAS_DESPESA_CARTAO.map(c => <option key={c}>{c}</option>)}
           </Select>
           <Select
             label="Origem do recurso"
