@@ -48,8 +48,12 @@ export function useRelatorio(dateFrom, dateTo, modulo, origem) {
 
   const isLoading = lancamentosQuery.isLoading || cartaoQuery.isLoading
 
-  const rawLancamentos = (lancamentosQuery.data ?? []).filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria))
-  const allGastosCartao = cartaoQuery.data ?? []
+  const rawLancamentos = (modulo === 'Tudo' || modulo === 'Conta-Corrente')
+    ? (lancamentosQuery.data ?? []).filter(l => !CATEGORIAS_OCULTAS_ANALISES.includes(l.categoria))
+    : []
+  const allGastosCartao = (modulo === 'Tudo' || modulo === 'Cartão')
+    ? (cartaoQuery.data ?? [])
+    : []
 
   // Apply origem filter client-side (raw data always full, for export)
   const lancamentos = origem && origem !== 'tudo'
