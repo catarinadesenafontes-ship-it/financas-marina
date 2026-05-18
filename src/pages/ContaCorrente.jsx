@@ -16,7 +16,7 @@ import { CategoryIcon } from '../components/CategoryIcon'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
-import { CATEGORIAS_DESPESA_CONTAS, CATEGORIAS_RECEITA } from '../utils/categorias'
+import { CATEGORIAS_DESPESA_CONTAS, CATEGORIAS_RECEITA, CATEGORIAS_ALL } from '../utils/categorias'
 import { EditLancamentoModal } from '../components/EditLancamentoModal'
 import { Toast, useToast } from '../components/Toast'
 
@@ -31,6 +31,7 @@ export function ContaCorrente() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm())
   const [editTarget, setEditTarget] = useState(null)
+  const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const { toast, showSuccess, showError, hideToast } = useToast()
 
   const { contas, contaItau, contaInter } = useContas()
@@ -124,6 +125,7 @@ export function ContaCorrente() {
   const saldo = tab === 'Itaú' ? saldoItau : tab === 'Inter' ? saldoInter : saldoConsolidado
 
   const visibleLanc = filtrarPeriodo(allLanc)
+    .filter(l => !categoriaFiltro || l.categoria === categoriaFiltro)
   const categoriasDespesa = CATEGORIAS_DESPESA_CONTAS
   const categoriasReceita = CATEGORIAS_RECEITA
 
@@ -185,7 +187,15 @@ export function ContaCorrente() {
             </div>
             <MonthSelector value={mesRef} onChange={v => { setMesRef(v); setDateRange(undefined) }} />
           </div>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+            <select
+              value={categoriaFiltro}
+              onChange={e => setCategoriaFiltro(e.target.value)}
+              className="text-xs bg-cream border border-cream-dark rounded-lg px-2 py-1.5 text-text-primary cursor-pointer"
+            >
+              <option value="">Todas as categorias</option>
+              {CATEGORIAS_ALL.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
             <DateRangePicker
               range={dateRange}
               onRangeChange={setDateRange}

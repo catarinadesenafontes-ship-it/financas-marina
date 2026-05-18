@@ -24,6 +24,7 @@ export function Cartao() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm())
   const [editTarget, setEditTarget] = useState(null)
+  const [categoriaFiltro, setCategoriaFiltro] = useState('')
   const { toast, showSuccess, showError, hideToast } = useToast()
 
   const { gastos, totalGasto, limite, disponivel, config, melhorDiaCompra, isLoading, addGasto, deleteGasto, isAdding } = useCartao(faturaRef)
@@ -69,6 +70,7 @@ export function Cartao() {
   }
 
   const gastosFiltrados = filtrarPeriodo(gastos)
+    .filter(g => !categoriaFiltro || g.categoria === categoriaFiltro)
   const pct = limite > 0 ? Math.min((totalGasto / limite) * 100, 100) : 0
 
   return (
@@ -123,7 +125,15 @@ export function Cartao() {
             </div>
           )}
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+            <select
+              value={categoriaFiltro}
+              onChange={e => setCategoriaFiltro(e.target.value)}
+              className="text-xs bg-cream border border-cream-dark rounded-lg px-2 py-1.5 text-text-primary cursor-pointer"
+            >
+              <option value="">Todas as categorias</option>
+              {CATEGORIAS_DESPESA_CARTAO.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
             <DateRangePicker
               range={dateRange}
               onRangeChange={setDateRange}
