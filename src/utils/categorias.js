@@ -34,6 +34,7 @@ export const CATEGORIAS_DESPESA_CONTAS = [
   'Exames',
   'Farmácia',
   'Fatura de cartão de crédito',
+  'Faxina',
   'Hortifruti',
   'Ifood',
   'Lazer',
