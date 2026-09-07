@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { CATEGORIAS_OCULTAS_ANALISES } from '../utils/categorias'
+import { todayRef } from '../utils/formatDate'
 
 function monthDateRange(mesRef) {
   const [y, m] = mesRef.split('-').map(Number)
@@ -19,7 +20,10 @@ export function useMesada(mesRef) {
   const { user } = useAuth()
   const qc = useQueryClient()
 
-  const cutoffDate = lastDayOf(mesRef)
+  // Mesmo critério do saldo da conta-corrente: o acumulado é o que já entrou e saiu.
+  const fimDoMes = lastDayOf(mesRef)
+  const hoje = todayRef()
+  const cutoffDate = fimDoMes < hoje ? fimDoMes : hoje
 
   const saldoAcumQuery = useQuery({
     queryKey: ['saldo_mesada', user?.id, cutoffDate],

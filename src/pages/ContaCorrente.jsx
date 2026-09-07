@@ -15,6 +15,8 @@ import { DateRangePicker } from '../components/DateRangePicker'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
+import { isEntrada } from '../utils/calcSaldo'
+import { rotuloLancamento, normalizarDescricao } from '../utils/rotuloLancamento'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
 import { CATEGORIAS_DESPESA_CONTAS, CATEGORIAS_RECEITA, CATEGORIAS_ALL } from '../utils/categorias'
 import { EditLancamentoModal } from '../components/EditLancamentoModal'
@@ -77,7 +79,7 @@ export function ContaCorrente() {
           conta_id: contaSelecionada?.id || contaItau?.id,
           tipo: form.tipo,
           valor,
-          descricao: form.descricao,
+          descricao: normalizarDescricao(form.descricao),
           data: form.data,
           categoria: form.categoria,
           forma_pagamento: form.tipo === 'saida' ? form.forma_pagamento : null,
@@ -107,7 +109,10 @@ export function ContaCorrente() {
     return `${mesRef}-${String(lastDay).padStart(2, '0')}`
   }, [mesRef, dateRange])
 
-  const { saldoItau, saldoInter, saldoConsolidado } = useSaldoCC(cutoffDate)
+  const {
+    saldoItau, saldoInter, saldoConsolidado,
+    projItau, projInter, projConsolidado, temProjecao,
+  } = useSaldoCC(cutoffDate)
 
   const filtrarPeriodo = (ls) => {
     if (!dateRange?.from || !dateRange?.to) return ls
@@ -123,6 +128,7 @@ export function ContaCorrente() {
   else allLanc = [...lancamentos].sort((a, b) => b.data.localeCompare(a.data))
 
   const saldo = tab === 'Itaú' ? saldoItau : tab === 'Inter' ? saldoInter : saldoConsolidado
+  const projecao = tab === 'Itaú' ? projItau : tab === 'Inter' ? projInter : projConsolidado
 
   const visibleLanc = filtrarPeriodo(allLanc)
     .filter(l => !categoriaFiltro || l.categoria === categoriaFiltro)
@@ -184,6 +190,12 @@ export function ContaCorrente() {
               <p className={`font-mono font-bold text-2xl ${saldo >= 0 ? 'text-green-deep' : 'text-danger'}`}>
                 {formatCurrency(saldo)}
               </p>
+              {temProjecao && (
+                <p className="text-[10px] text-text-muted mt-1">
+                  Projetado até {formatDate(cutoffDate)}:{' '}
+                  <span className="font-mono">{formatCurrency(projecao)}</span>
+                </p>
+              )}
             </div>
             <MonthSelector value={mesRef} onChange={v => { setMesRef(v); setDateRange(undefined) }} />
           </div>
@@ -302,11 +314,10 @@ export function ContaCorrente() {
           />
 
           <Input
-            label="Descrição"
+            label="Descrição (opcional)"
             placeholder="Ex: Mercado, Salário..."
             value={form.descricao}
             onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-            required
           />
 
           <Input
@@ -372,10 +383,7 @@ export function ContaCorrente() {
 
 function LancamentoItem({ lancamento: l, todoLanc, onDelete, onEdit }) {
   const contaNome = l.contas?.nome ?? ''
-  const isEntrada = l.tipo === 'entrada' || (
-    l.tipo === 'transferencia' &&
-    todoLanc.some(lp => lp.id === l.transferencia_par_id && lp.conta_id !== l.conta_id)
-  )
+  const entrada = isEntrada(l, todoLanc)
   const formaPag = l.forma_pagamento
 
   return (
@@ -393,7 +401,7 @@ function LancamentoItem({ lancamento: l, todoLanc, onDelete, onEdit }) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-text-primary truncate">{l.descricao}</p>
+        <p className="text-sm font-medium text-text-primary truncate">{rotuloLancamento(l)}</p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           <span className="text-[10px] text-text-muted">{formatDate(l.data)}</span>
           {contaNome && (
@@ -417,8 +425,8 @@ function LancamentoItem({ lancamento: l, todoLanc, onDelete, onEdit }) {
 
       <div className="flex items-center gap-2 flex-shrink-0">
         <span className={`font-mono text-sm font-semibold
-          ${isEntrada ? 'text-green-deep' : 'text-danger'}`}>
-          {isEntrada ? '+' : '-'}{formatCurrency(Math.abs(Number(l.valor)))}
+          ${entrada ? 'text-green-deep' : 'text-danger'}`}>
+          {entrada ? '+' : '-'}{formatCurrency(Math.abs(Number(l.valor)))}
         </span>
         <button
           onClick={onEdit}

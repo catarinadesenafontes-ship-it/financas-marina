@@ -10,6 +10,7 @@ import { EditLancamentoModal } from '../components/EditLancamentoModal'
 import { EditGastoCartaoModal } from '../components/EditGastoCartaoModal'
 import { Toast, useToast } from '../components/Toast'
 import { formatCurrency } from '../utils/formatCurrency'
+import { rotuloLancamento } from '../utils/rotuloLancamento'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
 
 export function Mesada() {
@@ -90,7 +91,7 @@ export function Mesada() {
 
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text-primary truncate">
-                    {item.descricao ?? item.categoria ?? '—'}
+                    {rotuloLancamento(item)}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                     <span className="text-[10px] text-text-muted">{formatDate(item.data)}</span>

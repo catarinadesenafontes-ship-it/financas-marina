@@ -37,7 +37,7 @@ export function Relatorio() {
   const [modulo, setModulo] = useState('Tudo')
   const [origem, setOrigem] = useState('tudo')
 
-  const { isLoading, despesas, receitas, totalDespesas, totalReceitas, raw } =
+  const { isLoading, despesas, receitas, totalDespesas, totalReceitas, totalFaturaPaga, raw } =
     useRelatorio(dateRange?.from, dateRange?.to, modulo, origem)
 
   const rangeLabel = dateRange?.from && dateRange?.to
@@ -66,13 +66,15 @@ export function Relatorio() {
         ['Data', 'Descrição', 'Categoria', 'Forma Pagamento', 'Banco', 'Origem', 'Valor', 'Tipo'],
         ...raw.lancamentos.map(l => [
           l.data,
-          l.descricao,
+          l.descricao ?? '',
           l.categoria ?? '',
           l.forma_pagamento ?? '',
           l.contas?.nome ?? '',
           l.origem ?? 'marina',
           Number(l.valor),
-          l.tipo,
+          l.tipo === 'transferencia'
+            ? `transferência (${l.direcao === 'entrada' ? 'entrada' : 'saída'})`
+            : l.tipo,
         ]),
       ]
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ccRows), 'Conta-Corrente')
@@ -83,7 +85,7 @@ export function Relatorio() {
       const cartaoRows = [
         ['Data', 'Descrição', 'Categoria', 'Fatura', 'Origem', 'Valor'],
         ...raw.gastos_cartao.map(g => [
-          g.data, g.descricao, g.categoria ?? '', g.fatura_mes, g.origem ?? 'marina', Number(g.valor),
+          g.data, g.descricao ?? '', g.categoria ?? '', g.fatura_mes, g.origem ?? 'marina', Number(g.valor),
         ]),
       ]
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cartaoRows), 'Cartão')
@@ -96,10 +98,10 @@ export function Relatorio() {
       const ajudaRows = [
         ['Data', 'Descrição', 'Categoria', 'Fonte', 'Valor', 'Tipo'],
         ...ajudaCC.map(l => [
-          l.data, l.descricao, l.categoria ?? '', l.contas?.nome ?? 'CC', Number(l.valor), l.tipo === 'entrada' ? 'Recebimento' : 'Gasto',
+          l.data, l.descricao ?? '', l.categoria ?? '', l.contas?.nome ?? 'CC', Number(l.valor), l.tipo === 'entrada' ? 'Recebimento' : 'Gasto',
         ]),
         ...ajudaCartao.map(g => [
-          g.data, g.descricao, g.categoria ?? '', 'Cartão', Number(g.valor), 'Gasto',
+          g.data, g.descricao ?? '', g.categoria ?? '', 'Cartão', Number(g.valor), 'Gasto',
         ]),
       ]
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ajudaRows), 'Ajuda de Custo')
@@ -201,21 +203,29 @@ export function Relatorio() {
         ) : (
           <>
             {/* Totais */}
-            <div className="grid grid-cols-3 gap-3">
-              <Card className="text-center">
-                <p className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Receitas</p>
-                <p className="font-mono font-bold text-green-deep text-sm">{formatCurrency(totalReceitas)}</p>
-              </Card>
-              <Card className="text-center">
-                <p className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Despesas</p>
-                <p className="font-mono font-bold text-danger text-sm">{formatCurrency(totalDespesas)}</p>
-              </Card>
-              <Card className="text-center">
-                <p className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Saldo</p>
-                <p className={`font-mono font-bold text-sm ${totalReceitas - totalDespesas >= 0 ? 'text-green-deep' : 'text-danger'}`}>
-                  {formatCurrency(totalReceitas - totalDespesas)}
+            <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-3">
+                <Card className="text-center">
+                  <p className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Receitas</p>
+                  <p className="font-mono font-bold text-green-deep text-sm">{formatCurrency(totalReceitas)}</p>
+                </Card>
+                <Card className="text-center">
+                  <p className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Despesas</p>
+                  <p className="font-mono font-bold text-danger text-sm">{formatCurrency(totalDespesas)}</p>
+                </Card>
+                <Card className="text-center">
+                  <p className="text-[10px] text-text-muted uppercase tracking-wide mb-1">Saldo</p>
+                  <p className={`font-mono font-bold text-sm ${totalReceitas - totalDespesas >= 0 ? 'text-green-deep' : 'text-danger'}`}>
+                    {formatCurrency(totalReceitas - totalDespesas)}
+                  </p>
+                </Card>
+              </div>
+              {totalFaturaPaga > 0 && (
+                <p className="text-[11px] text-text-muted leading-snug px-1">
+                  Pagamento de fatura no período: {formatCurrency(totalFaturaPaga)} — fora do total de
+                  despesas, porque as compras do cartão já entram uma a uma nas categorias.
                 </p>
-              </Card>
+              )}
             </div>
 
             {/* Gráfico de despesas */}
@@ -316,8 +326,18 @@ function CategoriaGroup({ categoria, total, items, tipo }) {
           {items.map((item, i) => (
             <div key={i} className="flex items-center justify-between px-4 py-2.5 border-b border-cream-dark/50 last:border-0">
               <div>
-                <p className="text-xs text-text-primary">{item.descricao || item.origem || '—'}</p>
-                <p className="text-[10px] text-text-muted">{formatDate(item.data)} · {item.fonte}</p>
+                {item.descricao?.trim() ? (
+                  <>
+                    <p className="text-xs text-text-primary">{item.descricao.trim()}</p>
+                    <p className="text-[10px] text-text-muted">{formatDate(item.data)} · {item.fonte}</p>
+                  </>
+                ) : (
+                  /* sem descrição a linha já está dentro do grupo da categoria:
+                     data e conta bastam para identificar */
+                  <p className="text-xs text-text-primary">
+                    {formatDate(item.data)} <span className="text-text-muted">· {item.fonte}</span>
+                  </p>
+                )}
               </div>
               <span className={`font-mono text-xs font-semibold ${isReceita ? 'text-green-deep' : 'text-danger'}`}>
                 {formatCurrency(Number(item.valor))}

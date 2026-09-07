@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Modal } from './Modal'
 import { Input, Select } from './Input'
 import { Button } from './Button'
+import { normalizarDescricao } from '../utils/rotuloLancamento'
 import { CATEGORIAS_DESPESA_CARTAO } from '../utils/categorias'
 
 export function EditGastoCartaoModal({ open, onClose, gasto, onSuccess, onError }) {
@@ -34,7 +35,7 @@ export function EditGastoCartaoModal({ open, onClose, gasto, onSuccess, onError 
         .from('gastos_cartao')
         .update({
           data: form.data,
-          descricao: form.descricao,
+          descricao: normalizarDescricao(form.descricao),
           valor,
           categoria: form.categoria,
           origem: form.origem,
@@ -75,10 +76,9 @@ export function EditGastoCartaoModal({ open, onClose, gasto, onSuccess, onError 
         />
 
         <Input
-          label="Descrição"
+          label="Descrição (opcional)"
           value={form.descricao}
           onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-          required
         />
 
         <Input

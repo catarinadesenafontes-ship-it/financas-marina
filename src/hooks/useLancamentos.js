@@ -85,6 +85,8 @@ export function useLancamentos(mesRef) {
 async function criarTransferencia(userId, payload) {
   const { contaOrigemId, contaDestinoId, valor, descricao, data, categoria } = payload
 
+  // A direção vai gravada em cada perna: os dois lados apontam um para o outro
+  // via transferencia_par_id, então o par sozinho não diz quem saiu e quem entrou.
   // Inserir saída na origem (sem par ainda)
   const { data: saida, error: e1 } = await supabase
     .from('lancamentos_cc')
@@ -96,6 +98,7 @@ async function criarTransferencia(userId, payload) {
       tipo: 'transferencia',
       valor: Math.abs(valor),
       categoria: categoria || null,
+      direcao: 'saida',
     }])
     .select()
     .single()
@@ -112,6 +115,7 @@ async function criarTransferencia(userId, payload) {
       tipo: 'transferencia',
       valor: Math.abs(valor),
       categoria: categoria || null,
+      direcao: 'entrada',
       transferencia_par_id: saida.id,
     }])
     .select()

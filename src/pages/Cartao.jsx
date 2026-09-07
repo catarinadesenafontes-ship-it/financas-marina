@@ -14,6 +14,7 @@ import { DateRangePicker } from '../components/DateRangePicker'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { formatCurrency } from '../utils/formatCurrency'
+import { rotuloLancamento, normalizarDescricao } from '../utils/rotuloLancamento'
 import { formatDate, currentMonthRef } from '../utils/formatDate'
 import { CATEGORIAS_DESPESA_CARTAO } from '../utils/categorias'
 
@@ -50,7 +51,7 @@ export function Cartao() {
     try {
       await addGasto({
         valor,
-        descricao: form.descricao,
+        descricao: normalizarDescricao(form.descricao),
         data: form.data,
         categoria: form.categoria,
         origem: form.origem,
@@ -160,10 +161,11 @@ export function Cartao() {
                     <CategoryIcon categoria={g.categoria} size={16} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">{g.descricao}</p>
+                    <p className="text-sm font-medium text-text-primary truncate">{rotuloLancamento(g)}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] text-text-muted">{formatDate(g.data)}</span>
-                      {g.categoria && (
+                      {/* sem descrição a categoria já é o título — a etiqueta repetiria a palavra */}
+                      {g.categoria && g.descricao?.trim() && (
                         <span className="text-[10px] text-text-muted bg-cream px-1.5 py-0.5 rounded">
                           {g.categoria}
                         </span>
@@ -215,11 +217,10 @@ export function Cartao() {
             required
           />
           <Input
-            label="Descrição"
+            label="Descrição (opcional)"
             placeholder="Ex: Netflix, Supermercado..."
             value={form.descricao}
             onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-            required
           />
           <Input
             label="Data"

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import { currentMonthRef } from '../utils/formatDate'
-import { CATEGORIAS_OCULTAS_ANALISES } from '../utils/categorias'
+import { CATEGORIAS_OCULTAS_ANALISES, CATEGORIA_FATURA_CARTAO } from '../utils/categorias'
 
 function getMonthRef(offset = 0) {
   const d = new Date()
@@ -54,8 +54,13 @@ export function useInsights() {
     const { mesAtual, mes1, mes2, mes3, config } = data
     const insights = []
 
+    // As compras do cartão já vêm de gastos_cartao; somar também o pagamento da
+    // fatura contaria o mesmo dinheiro duas vezes.
+    const saidasReais = lancamentos =>
+      lancamentos.filter(l => l.tipo === 'saida' && l.categoria !== CATEGORIA_FATURA_CARTAO)
+
     const totalGastosMes = (lancamentos, gastos_cartao) =>
-      lancamentos.filter(l => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0) +
+      saidasReais(lancamentos).reduce((s, l) => s + Number(l.valor), 0) +
       gastos_cartao.reduce((s, g) => s + Number(g.valor), 0)
 
     const totalReceitasMes = (lancamentos) =>
@@ -63,7 +68,7 @@ export function useInsights() {
 
     const gastoPorCat = (lancamentos, gastos_cartao) => {
       const map = {}
-      lancamentos.filter(l => l.tipo === 'saida').forEach(l => {
+      saidasReais(lancamentos).forEach(l => {
         const cat = l.categoria ?? 'Outros'
         map[cat] = (map[cat] ?? 0) + Number(l.valor)
       })

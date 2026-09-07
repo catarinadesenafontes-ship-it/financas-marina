@@ -9,20 +9,24 @@ import { useContas } from '../hooks/useContas'
 import { Card } from '../components/Card'
 import { PageHeader } from '../components/PageHeader'
 import { formatCurrency } from '../utils/formatCurrency'
-import { currentMonthRef } from '../utils/formatDate'
+import { calcSaldoConta } from '../utils/calcSaldo'
+import { currentMonthRef, todayRef } from '../utils/formatDate'
 
 function useDashboardData() {
   const { user } = useAuth()
   const mesRef = currentMonthRef()
+  const hoje = todayRef()
 
   return useQuery({
-    queryKey: ['dashboard', user?.id, mesRef],
+    queryKey: ['dashboard', user?.id, mesRef, hoje],
     queryFn: async () => {
       const [lancamentos, cartao, contas] = await Promise.all([
+        // Corte em hoje: conta pré-lançada para depois não pode inflar o saldo.
         supabase
           .from('lancamentos_cc')
           .select('*, contas(nome)')
-          .eq('user_id', user.id),
+          .eq('user_id', user.id)
+          .lte('data', hoje),
         supabase
           .from('gastos_cartao')
           .select('valor, fatura_mes')
@@ -118,24 +122,9 @@ export function Dashboard() {
     const itauConta = contasInfo.find(c => c.nome === 'Itaú')
     const interConta = contasInfo.find(c => c.nome === 'Inter')
 
-    function calcContaSaldo(contaId) {
-      return (data.lancamentos ?? [])
-        .filter(l => l.conta_id === contaId)
-        .reduce((acc, l) => {
-          if (l.tipo === 'entrada') return acc + Number(l.valor)
-          if (l.tipo === 'saida') return acc - Number(l.valor)
-          if (l.tipo === 'transferencia') {
-            const isEntrada = data.lancamentos.some(
-              lp => lp.id === l.transferencia_par_id && lp.conta_id !== contaId
-            )
-            return acc + (isEntrada ? Number(l.valor) : -Number(l.valor))
-          }
-          return acc
-        }, 0)
-    }
-
-    const itau = itauConta ? calcContaSaldo(itauConta.id) : 0
-    const inter = interConta ? calcContaSaldo(interConta.id) : 0
+    const lancamentos = data.lancamentos ?? []
+    const itau = itauConta ? calcSaldoConta(lancamentos, itauConta.id) : 0
+    const inter = interConta ? calcSaldoConta(lancamentos, interConta.id) : 0
     return { itau, inter }
   }, [data, contasInfo])
 

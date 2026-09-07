@@ -6,6 +6,7 @@ import { Modal } from './Modal'
 import { Input, Select } from './Input'
 import { Button } from './Button'
 import { CATEGORIAS_DESPESA_CONTAS, CATEGORIAS_RECEITA } from '../utils/categorias'
+import { normalizarDescricao } from '../utils/rotuloLancamento'
 
 const FORMAS_PAGAMENTO = ['Pix', 'Espécie', 'Débito em conta']
 
@@ -38,7 +39,7 @@ export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onEr
     setSaving(true)
     try {
       if (lancamento.tipo === 'transferencia') {
-        const updates = { data: form.data, descricao: form.descricao, valor }
+        const updates = { data: form.data, descricao: normalizarDescricao(form.descricao), valor }
         const ps = [
           supabase.from('lancamentos_cc').update(updates).eq('id', lancamento.id),
         ]
@@ -52,7 +53,7 @@ export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onEr
         const contaSelecionada = contas.find(c => c.nome === form.banco)
         const payload = {
           data: form.data,
-          descricao: form.descricao,
+          descricao: normalizarDescricao(form.descricao),
           tipo: form.tipo,
           valor,
           categoria: form.categoria || null,
@@ -123,10 +124,9 @@ export function EditLancamentoModal({ open, onClose, lancamento, onSuccess, onEr
         />
 
         <Input
-          label="Descrição"
+          label="Descrição (opcional)"
           value={form.descricao}
           onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))}
-          required
         />
 
         <Input

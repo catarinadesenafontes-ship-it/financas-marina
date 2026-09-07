@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
-import { CATEGORIAS_OCULTAS_ANALISES } from '../utils/categorias'
+import { CATEGORIAS_OCULTAS_ANALISES, CATEGORIA_FATURA_CARTAO } from '../utils/categorias'
 
 export function useRelatorio(dateFrom, dateTo, modulo, origem) {
   const { user } = useAuth()
@@ -64,11 +64,22 @@ export function useRelatorio(dateFrom, dateTo, modulo, origem) {
     ? allGastosCartao.filter(g => g.origem === origem)
     : allGastosCartao
 
+  // O pagamento da fatura só sai dos totais quando as compras do cartão estão no
+  // relatório — aí sim seria contagem dupla. No filtro "Conta-Corrente" o cartão
+  // fica de fora, e o pagamento da fatura é o único registro daquele gasto.
+  const cartaoNoEscopo = modulo === 'Tudo' || modulo === 'Cartão'
+  const ehPagamentoFatura = l => l.tipo === 'saida' && l.categoria === CATEGORIA_FATURA_CARTAO
+
+  const totalFaturaPaga = cartaoNoEscopo
+    ? lancamentos.filter(ehPagamentoFatura).reduce((s, l) => s + Number(l.valor), 0)
+    : 0
+
   // Agrupa despesas por categoria
   const despesasMap = {}
 
   lancamentos
     .filter(l => l.tipo === 'saida')
+    .filter(l => !(cartaoNoEscopo && ehPagamentoFatura(l)))
     .forEach(l => {
       const cat = l.categoria ?? 'Outros'
       if (!despesasMap[cat]) despesasMap[cat] = { total: 0, items: [] }
@@ -112,6 +123,7 @@ export function useRelatorio(dateFrom, dateTo, modulo, origem) {
     receitas,
     totalDespesas,
     totalReceitas,
+    totalFaturaPaga,
     raw: { lancamentos: rawLancamentos, gastos_cartao: allGastosCartao },
   }
 }

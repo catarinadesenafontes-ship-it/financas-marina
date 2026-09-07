@@ -16,6 +16,13 @@ export function currentMonthRef() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
+// Data de hoje no mesmo formato do banco (YYYY-MM-DD), no fuso local.
+// toISOString() não serve aqui: ela converte para UTC e vira o dia errado à noite.
+export function todayRef() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
 export function monthOptions(count = 12) {
   const options = []
   const now = new Date()
