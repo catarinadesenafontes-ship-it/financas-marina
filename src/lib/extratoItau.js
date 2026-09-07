@@ -97,8 +97,9 @@ export function lerExtratoItau(conteudo) {
     }
   }
 
+  // saldoFinal é número: o fallback tem que sair da lista de saldos, não dele.
   const primeira = lancamentos[0]?.data ?? saldosDoDia[0].data
-  const ultima = lancamentos.at(-1)?.data ?? saldoFinal.data
+  const ultima = lancamentos.at(-1)?.data ?? saldosDoDia.at(-1).data
 
   return {
     conta,
@@ -106,8 +107,12 @@ export function lerExtratoItau(conteudo) {
     saldoDeclarado,
     saldoInicial,
     saldoFinal,
-    periodo: { inicio: primeira, fim: saldosDoDia.at(-1).data },
-    ultimoLancamento: ultima,
+    // O período tem que ser o do que o arquivo REALMENTE traz, do primeiro ao
+    // último lançamento. O Itaú fecha o extrato com uma linha "SALDO DO DIA" de
+    // hoje mesmo quando o último lançamento é de meses atrás — usar essa data
+    // faria a substituição apagar um período que o arquivo não cobre.
+    periodo: { inicio: primeira, fim: ultima },
+    ultimoSaldoEm: saldosDoDia.at(-1).data,
     linhas: lancamentos,
     consistente: furos.length === 0,
     furos,

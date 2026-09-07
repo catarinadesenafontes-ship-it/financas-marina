@@ -82,7 +82,7 @@ export function ImportarDocumento() {
     try {
       if (ehExtrato) {
         salvarTitular(nomeTitular)
-        const r = await lerExtrato({ arquivo, contaId, nomeTitular })
+        const r = await lerExtrato({ arquivo, contaId, nomeTitular, nomeConta: contaEscolhida?.nome })
         setDados(r)
         setCriarSaldoInicial(!r.temAnteriores)
         // Transferência entre as contas dela já existe lançada como par:

@@ -5,6 +5,7 @@ import { useAuth } from './useAuth'
 import { extrairTextoPdf } from '../lib/pdfTexto'
 import { lerExtratoCsv, lerArquivoTexto, linhasExtratoCsvParaLancamentos } from '../lib/extratoCsv'
 import {
+  normalizarTexto,
   montarChavesDedup,
   indexarCategorias,
   sugerirCategoria,
@@ -20,6 +21,11 @@ const CHAVES_PARA_INVALIDAR = [
 ]
 
 const LOTE = 200 // insere em blocos: 344 linhas numa tacada só é pedir problema
+
+// "Itaú" no arquivo e "Itau" no nome da conta são o mesmo banco.
+function mesmaInstituicao(a, b) {
+  return normalizarTexto(a) === normalizarTexto(b)
+}
 
 export function useImportacao() {
   const { user } = useAuth()
@@ -50,13 +56,23 @@ export function useImportacao() {
    * Lê o extrato em CSV. Não passa por IA: os valores já vêm separados, e a
    * coluna de saldo do próprio arquivo prova que a leitura ficou completa.
    */
-  async function lerExtrato({ arquivo, contaId, nomeTitular }) {
+  async function lerExtrato({ arquivo, contaId, nomeTitular, nomeConta }) {
     setErro(null)
     setEtapa('lendo')
     try {
       const indice = await carregarIndiceCategorias('lancamentos_cc')
       const conteudo = await lerArquivoTexto(arquivo)
       const extrato = lerExtratoCsv(conteudo)
+
+      // O leitor sabe de qual banco o arquivo veio. Se não for o da conta
+      // escolhida, para aqui: importar o extrato de um banco dentro da conta do
+      // outro embaralha as duas de um jeito chato de desfazer.
+      if (extrato.banco && nomeConta && !mesmaInstituicao(extrato.banco, nomeConta)) {
+        throw new Error(
+          `Esse arquivo é um extrato do ${extrato.banco}, mas você escolheu a conta ${nomeConta}. ` +
+          `Troque a conta para ${extrato.banco} ou escolha o arquivo certo.`
+        )
+      }
 
       const lidos = linhasExtratoCsvParaLancamentos(extrato.linhas, {
         contaId,
@@ -66,6 +82,9 @@ export function useImportacao() {
       })
 
       // Quantos lançamentos manuais serão substituídos, para ela saber antes.
+      // O filtro tem que ser IGUAL ao do delete lá embaixo — sem o
+      // importacao_id nulo, esta conta incluía o que veio de importações
+      // anteriores e anunciava a substituição de linhas que não seriam tocadas.
       const { count } = await supabase
         .from('lancamentos_cc')
         .select('id', { count: 'exact', head: true })
@@ -74,6 +93,7 @@ export function useImportacao() {
         .gte('data', extrato.periodo.inicio)
         .lte('data', extrato.periodo.fim)
         .neq('tipo', 'transferencia')
+        .is('importacao_id', null)
 
       // Já existe algum lançamento antes do período? Se não, o saldo de partida
       // do extrato precisa ser registrado, senão o app começa do zero e o saldo
