@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Trash2, CreditCard, Pencil } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Trash2, CreditCard, Pencil, Upload } from 'lucide-react'
 import { useCartao } from '../hooks/useCartao'
 import { EditGastoCartaoModal } from '../components/EditGastoCartaoModal'
 import { Toast, useToast } from '../components/Toast'
@@ -119,6 +120,14 @@ export function Cartao() {
             <p className="text-[10px] text-text-muted mt-1 text-right">{pct.toFixed(0)}% utilizado</p>
           </div>
 
+          <Link
+            to="/importar"
+            className="flex items-center justify-center gap-2 text-xs font-medium text-green-deep bg-green-pale rounded-xl px-3 py-2.5 hover:bg-green-soft/40 transition-colors"
+          >
+            <Upload size={14} />
+            Importar fatura em PDF
+          </Link>
+
           {melhorDiaCompra && (
             <div className="flex items-center gap-2 text-xs text-text-muted bg-cream rounded-lg px-3 py-2">
               <span>Melhor dia de compra:</span>
@@ -178,8 +187,8 @@ export function Cartao() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-semibold text-danger">
-                      -{formatCurrency(Number(g.valor))}
+                    <span className={`font-mono text-sm font-semibold ${Number(g.valor) < 0 ? 'text-green-deep' : 'text-danger'}`}>
+                      {Number(g.valor) < 0 ? '+' : '-'}{formatCurrency(Math.abs(Number(g.valor)))}
                     </span>
                     <button
                       onClick={() => setEditTarget(g)}

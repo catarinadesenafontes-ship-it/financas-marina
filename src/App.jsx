@@ -10,6 +10,7 @@ import { Mesada } from './pages/Mesada'
 import { Configuracoes } from './pages/Configuracoes'
 import { Relatorio } from './pages/Relatorio'
 import { Insights } from './pages/Insights'
+import { ImportarDocumento } from './pages/ImportarDocumento'
 
 function ProtectedLayout() {
   const { user, loading } = useAuth()
@@ -57,6 +58,7 @@ export function App() {
         <Route path="/mesada" element={<Mesada />} />
         <Route path="/relatorio" element={<Relatorio />} />
         <Route path="/insights" element={<Insights />} />
+        <Route path="/importar" element={<ImportarDocumento />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
