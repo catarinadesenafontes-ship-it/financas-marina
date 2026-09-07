@@ -1,0 +1,4 @@
+# Faturas e extratos de verdade ficam só na máquina — nada daqui vai para o GitHub.
+*
+!.gitignore
+!LEIA-ME.txt

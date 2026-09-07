@@ -1,0 +1,8 @@
+Coloque aqui um PDF de fatura e um de extrato de verdade.
+
+Servem para eu conferir e ajustar a leitura antes da Marina usar pra valer.
+Nada desta pasta é enviado para o GitHub — o .gitignore ao lado bloqueia tudo.
+
+Se o PDF tiver senha, escreva a senha aqui embaixo:
+
+  fatura-xxx.pdf  -> senha:
