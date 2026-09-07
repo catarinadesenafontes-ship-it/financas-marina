@@ -99,7 +99,6 @@ export function useImportacao() {
         .eq('user_id', user.id)
         .eq('conta_id', contaId)
         .eq('tipo', 'transferencia')
-        .eq('direcao', 'entrada')
         .gte('data', comFolga(extrato.periodo.inicio, -7))
         .lte('data', comFolga(extrato.periodo.fim, 7))
 

@@ -139,16 +139,27 @@ function categoriaAutomatica({ historico, descricao }) {
  * Converte as linhas do extrato no formato de lancamentos_cc.
  *
  * `nomeTitular` serve para reconhecer Pix que ela manda de uma conta dela para
- * a outra: isso é transferência, não receita, e marcar como entrada inflaria o
- * saldo consolidado — o mesmo erro que a gente acabou de consertar.
+ * a outra: isso é transferência, não receita nem despesa, e o par já existe
+ * lançado — importar de novo contaria o mesmo dinheiro duas vezes.
+ *
+ * Os dois sentidos contam: no extrato da conta que recebe o Pix é entrada, no
+ * da conta que envia é saída. Olhar só as entradas faria o extrato da conta de
+ * origem reimportar cada transferência como despesa nova.
+ *
+ * Só que o nome sozinho não basta: o pagamento da fatura do cartão sai como
+ * "Pagamento Fatura - NOME DELA" e não é transferência entre contas nenhuma.
+ * Por isso a operação também precisa ser de transferência (Pix, TED, DOC).
  */
+const OPERACOES_DE_TRANSFERENCIA = /\b(pix|ted|doc|transfer)/i
 export function linhasExtratoCsvParaLancamentos(linhas, { contaId, indiceCategorias, nomeTitular, sugerirCategoria }) {
   const alvo = nomeTitular?.trim().toLowerCase()
 
   return linhas.map((linha, i) => {
     const descricao = linha.descricao || linha.historico
     const ehTransferenciaPropria =
-      !!alvo && linha.valor > 0 && descricao.toLowerCase().includes(alvo)
+      !!alvo &&
+      OPERACOES_DE_TRANSFERENCIA.test(linha.historico) &&
+      descricao.toLowerCase().includes(alvo)
 
     return {
       indice: i,
