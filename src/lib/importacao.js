@@ -140,3 +140,89 @@ function montarDescricao(linha) {
   }
   return linha.descricao
 }
+
+// A chave do grupo a que um lançamento pertence. A tela usa a mesma função para
+// aplicar a categoria escolhida em todas as linhas do grupo de uma vez.
+export function grupoDe(lancamento) {
+  return chaveComerciante(lancamento?.descricao) || lancamento?.descricao || '(sem nome)'
+}
+
+/**
+ * Agrupa os lançamentos por estabelecimento, para a revisão.
+ *
+ * Um extrato de quatro meses tem centenas de linhas, mas poucas dezenas de
+ * lugares: no extrato real da Marina, 344 linhas viraram 105 estabelecimentos,
+ * e os 20 maiores cobrem dois terços de tudo. Escolher a categoria uma vez por
+ * lugar é a diferença entre 20 decisões e 344.
+ */
+export function agruparPorEstabelecimento(lancamentos = []) {
+  const grupos = new Map()
+
+  for (const l of lancamentos) {
+    const chave = grupoDe(l)
+    if (!grupos.has(chave)) {
+      grupos.set(chave, { chave, rotulos: new Map(), linhas: [], categorias: new Set() })
+    }
+    const g = grupos.get(chave)
+    g.linhas.push(l)
+    g.rotulos.set(l.descricao, (g.rotulos.get(l.descricao) ?? 0) + 1)
+    g.categorias.add(l.categoria ?? null)
+  }
+
+  return [...grupos.values()]
+    .map(g => {
+      // Rótulo do grupo: a descrição que mais aparece nele.
+      const [rotulo] = [...g.rotulos.entries()].sort((a, b) => b[1] - a[1])[0]
+      const categorias = [...g.categorias]
+      return {
+        chave: g.chave,
+        rotulo,
+        linhas: g.linhas,
+        quantidade: g.linhas.length,
+        total: g.linhas.reduce((s, l) => s + (l.tipo === 'entrada' ? 1 : -1) * Number(l.valor), 0),
+        // Só herda categoria se todas as linhas do grupo concordarem.
+        categoria: categorias.length === 1 ? categorias[0] : null,
+        incluir: g.linhas.every(l => l.incluir !== false),
+      }
+    })
+    .sort((a, b) => b.quantidade - a.quantidade || Math.abs(b.total) - Math.abs(a.total))
+}
+
+const TOLERANCIA_DIAS = 5
+
+/**
+ * Casa os Pix que ela mandou de uma conta sua para a outra com as
+ * transferências que já estão lançadas no app, e devolve as que faltam.
+ *
+ * A data não bate exata: ela lança a transferência de memória, alguns dias
+ * depois do movimento real (no extrato dela, 08/08 virou 10/08 e 01/07 virou
+ * 28/06). Por isso o casamento é por valor, com folga na data.
+ *
+ * Isso importa porque transferência não pode ser importada como receita: o par
+ * já existe na outra conta, e contar de novo inflaria o saldo. Mas as que nunca
+ * foram lançadas precisam aparecer, senão o saldo fecha errado e ninguém sabe
+ * por quê.
+ */
+export function casarTransferenciasProprias(doExtrato = [], jaLancadas = []) {
+  const usadas = new Set()
+  const faltando = []
+
+  const distanciaEmDias = (a, b) =>
+    Math.abs(new Date(`${a}T12:00:00`) - new Date(`${b}T12:00:00`)) / 86400000
+
+  for (const linha of doExtrato) {
+    const i = jaLancadas.findIndex((existente, idx) =>
+      !usadas.has(idx) &&
+      Math.abs(Number(existente.valor) - Number(linha.valor)) < 0.011 &&
+      distanciaEmDias(existente.data, linha.data) <= TOLERANCIA_DIAS
+    )
+    if (i >= 0) usadas.add(i)
+    else faltando.push(linha)
+  }
+
+  return {
+    casadas: usadas.size,
+    faltando,
+    totalFaltando: faltando.reduce((s, l) => s + Number(l.valor), 0),
+  }
+}
