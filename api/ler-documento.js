@@ -16,6 +16,7 @@ const LinhaFatura = z.object({
     .describe('compra = gasto; estorno = devolução; pagamento = pagamento da fatura anterior; encargo = juros, multa, anuidade, IOF'),
   parcela_atual: z.number().nullable().describe('número da parcela, ou null se à vista'),
   parcela_total: z.number().nullable().describe('total de parcelas, ou null se à vista'),
+  final_cartao: z.string().nullable().describe('últimos dígitos do cartão desta linha — uma fatura pode ter mais de um cartão'),
 })
 
 const LinhaExtrato = z.object({
@@ -45,11 +46,22 @@ const INSTRUCOES = `Você extrai lançamentos de documentos bancários brasileir
 
 Regras:
 - Devolva TODAS as linhas de lançamento do documento, na ordem em que aparecem. Não resuma, não agrupe, não pule linha nenhuma.
-- Datas em AAAA-MM-DD. O documento costuma trazer DD/MM ou DD/MMM sem o ano — deduza o ano pelo período do documento, virando o ano quando os meses dão a volta (dezembro seguido de janeiro).
+- Datas em AAAA-MM-DD. Aceite os formatos que aparecem: "04 de jul. 2026", "04/07/2026", "04/07". Quando o ano não vier escrito, deduza pelo período do documento, virando o ano quando os meses dão a volta (dezembro seguido de janeiro).
 - Valores em número, sempre positivos, com ponto decimal. "1.234,56" vira 1234.56.
+- O texto vem de um PDF e às vezes quebra números no meio: "R$ 97 7, 50" é 977,50. Junte os pedaços.
 - Não invente lançamento e não conserte o que está escrito: copie a descrição como está no documento.
-- Ignore cabeçalho, rodapé, propaganda, limites, saldo disponível e linhas de total. Total e saldo têm campo próprio.
-- Parcelamento costuma vir como "PARC 03/10", "3/10" ou "(3 de 10)" na descrição: preencha parcela_atual e parcela_total e deixe a descrição inteira mesmo assim.
+- Parcelamento vem como "(Parcela 02 de 03)", "PARC 03/10", "3/10" ou "(3 de 10)": preencha parcela_atual e parcela_total e mantenha a descrição inteira mesmo assim.
+
+Sinal do valor (fatura de cartão):
+- Sem marca, ou com "-" isolado antes do valor, é COMPRA. O "-" solto costuma ser só uma coluna vazia da tabela, não sinal de negativo.
+- Com "+" antes do valor é dinheiro voltando: estorno, ou pagamento da fatura anterior (descrições como "PAGAMENTO ON LINE", "PAGTO FATURA").
+
+O que NÃO é lançamento desta fatura, e deve ficar de fora:
+- Cabeçalho, rodapé, propaganda, limite de crédito, saldo utilizado e disponível.
+- Linhas de total e subtotal ("Total CARTÃO 5555****2625", "Total da sua fatura"). O total tem campo próprio.
+- A seção "Próxima fatura" / "compras parceladas que farão parte da próxima fatura". São parcelas FUTURAS, ainda não cobradas — incluí-las cobraria duas vezes.
+
+Uma fatura pode ter mais de um cartão, cada um com seu bloco e seu subtotal. Traga os lançamentos de todos, preenchendo final_cartao com o cartão do bloco.
 
 Se o texto não for um documento bancário, ou estiver ilegível, devolva a lista de linhas vazia.`
 
