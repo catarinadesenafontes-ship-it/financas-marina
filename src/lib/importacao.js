@@ -250,8 +250,12 @@ export function marcarTransferenciasJaLancadas(lancamentos = [], jaLancadas = []
     Math.abs(new Date(`${a}T12:00:00`) - new Date(`${b}T12:00:00`)) / 86400000
 
   const marcados = lancamentos.map(l => {
-    if (l.ehTransferenciaPropria) return l
-    if (!OPERACAO_TRANSFERENCIA.test(l.historico ?? l.descricao ?? '')) return l
+    // Estar marcada pelo nome não diz se JÁ FOI LANÇADA — são duas perguntas
+    // diferentes. Pular essas aqui fazia toda transferência do Inter (onde o
+    // nome aparece inteiro) ser dada como não lançada, mesmo já existindo.
+    const pareceTransferencia =
+      l.ehTransferenciaPropria || OPERACAO_TRANSFERENCIA.test(l.historico ?? l.descricao ?? '')
+    if (!pareceTransferencia) return l
 
     const i = jaLancadas.findIndex((t, idx) =>
       !usadas.has(idx) &&
