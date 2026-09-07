@@ -428,8 +428,12 @@ function CardResultado({ resultado, onDesfazer, onNovo }) {
           ) : (
             <span>
               O saldo no app ficou {formatCurrency(resultado.saldoApp)} e o banco mostra{' '}
-              {formatCurrency(resultado.saldoBanco)} — diferença de {formatCurrency(Math.abs(resultado.diferenca))}.
-              Costuma ser transferência entre contas que ainda não foi lançada.
+              {formatCurrency(resultado.saldoBanco)} — diferença de {formatCurrency(Math.abs(resultado.diferenca))}.{' '}
+              {/* Centavos e reais têm causas diferentes: apontar transferência
+                  faltando numa diferença de R$ 0,07 só confunde. */}
+              {Math.abs(resultado.diferenca) < 1
+                ? 'Diferença de centavos costuma ser rendimento que o banco credita sem listar como lançamento — pode deixar assim.'
+                : 'Costuma ser transferência entre contas que ainda não foi lançada.'}
             </span>
           )}
         </div>
