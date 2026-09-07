@@ -277,6 +277,7 @@ export function ImportarDocumento() {
 
 function ResumoExtrato({ dados, conta, criarSaldoInicial, onCriarSaldoInicial }) {
   const { extrato, manuaisNoPeriodo, temAnteriores, arquivoNome, transferencias } = dados
+  const somaDosFuros = (extrato.furos ?? []).reduce((s, f) => s + Math.abs(f.diferenca ?? 0), 0)
 
   return (
     <Card className="space-y-3">
@@ -302,14 +303,24 @@ function ResumoExtrato({ dados, conta, criarSaldoInicial, onCriarSaldoInicial })
           </span>
         </div>
       ) : (
-        <div className="text-[11px] text-warning bg-orange-50 rounded-xl px-3 py-2.5 space-y-1.5">
+        // Diferença de centavos costuma ser rendimento que o banco credita sem
+        // listar como lançamento — não é o mesmo problema que faltar um mês.
+        <div className={`text-[11px] rounded-xl px-3 py-2.5 space-y-1.5
+          ${somaDosFuros < 1 ? 'text-text-secondary bg-cream' : 'text-warning bg-orange-50'}`}>
           <div className="flex items-start gap-2">
             <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-            <span>
-              <strong>Esse arquivo está incompleto.</strong> O saldo declarado não bate com a soma
-              dos lançamentos — quase sempre é período errado na exportação. Exporte de novo
-              cobrindo até hoje antes de importar.
-            </span>
+            {somaDosFuros < 1 ? (
+              <span>
+                A conferência fechou com {formatCurrency(somaDosFuros)} de diferença — provavelmente
+                rendimento que o banco creditou sem listar. Pode importar.
+              </span>
+            ) : (
+              <span>
+                <strong>Esse arquivo parece incompleto.</strong> O saldo declarado não bate com a
+                soma dos lançamentos por {formatCurrency(somaDosFuros)} — quase sempre é período
+                errado na exportação. Confira antes de importar.
+              </span>
+            )}
           </div>
           <ul className="pl-5">
             {extrato.furos.slice(0, 4).map((f, i) => (
@@ -318,7 +329,7 @@ function ResumoExtrato({ dados, conta, criarSaldoInicial, onCriarSaldoInicial })
               </li>
             ))}
           </ul>
-          {extrato.periodoTexto && (
+          {extrato.periodoTexto && somaDosFuros >= 1 && (
             <p className="pl-5 text-text-muted">O arquivo diz cobrir: {extrato.periodoTexto}</p>
           )}
         </div>
