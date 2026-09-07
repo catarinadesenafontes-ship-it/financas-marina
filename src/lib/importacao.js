@@ -226,3 +226,43 @@ export function casarTransferenciasProprias(doExtrato = [], jaLancadas = []) {
     totalFaltando: faltando.reduce((s, l) => s + Number(l.valor), 0),
   }
 }
+
+// Operações que podem ser transferência entre contas. Serve de guarda: casar
+// só por valor e data marcaria como transferência uma compra de R$ 800 feita
+// perto de uma transferência de R$ 800.
+const OPERACAO_TRANSFERENCIA = /\b(pix|ted|doc|transf)/i
+
+/**
+ * Marca como transferência as linhas do extrato que casam com uma
+ * transferência já lançada no app.
+ *
+ * Isso é mais confiável que procurar o nome dela na descrição: o Inter escreve
+ * "Marina Fontes Moreira" e o Itaú abrevia para "PIX TRANSF MARINA 28/06". O
+ * valor e a data casam nos dois; o nome, não.
+ *
+ * Cada transferência lançada é consumida uma vez só, para dois lançamentos
+ * iguais não casarem com o mesmo par.
+ */
+export function marcarTransferenciasJaLancadas(lancamentos = [], jaLancadas = []) {
+  const usadas = new Set()
+
+  const distanciaEmDias = (a, b) =>
+    Math.abs(new Date(`${a}T12:00:00`) - new Date(`${b}T12:00:00`)) / 86400000
+
+  const marcados = lancamentos.map(l => {
+    if (l.ehTransferenciaPropria) return l
+    if (!OPERACAO_TRANSFERENCIA.test(l.historico ?? l.descricao ?? '')) return l
+
+    const i = jaLancadas.findIndex((t, idx) =>
+      !usadas.has(idx) &&
+      Math.abs(Number(t.valor) - Number(l.valor)) < 0.011 &&
+      distanciaEmDias(t.data, l.data) <= TOLERANCIA_DIAS
+    )
+    if (i === -1) return l
+
+    usadas.add(i)
+    return { ...l, ehTransferenciaPropria: true, casouComLancada: true }
+  })
+
+  return { lancamentos: marcados, casadas: usadas.size }
+}

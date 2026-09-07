@@ -16,6 +16,8 @@
 // As linhas vêm da mais nova para a mais antiga, e a coluna Saldo é o saldo
 // DEPOIS daquele lançamento.
 
+import { ehExtratoItau, lerExtratoItau } from './extratoItau.js'
+
 export class ExtratoInvalido extends Error {
   constructor(mensagem) {
     super(mensagem)
@@ -46,12 +48,22 @@ function paraData(texto) {
   return `${m[3]}-${m[2]}-${m[1]}`
 }
 
+/**
+ * Ponto de entrada: cada banco exporta de um jeito. O Inter usa ';' com uma
+ * coluna de saldo por linha; o Itaú usa largura fixa com linhas "SALDO DO DIA".
+ * Os dois devolvem a mesma forma, então a tela não precisa saber a diferença.
+ */
 export function lerExtratoCsv(conteudo) {
+  if (ehExtratoItau(conteudo)) return { ...lerExtratoItau(conteudo), banco: 'Itaú' }
+  return { ...lerExtratoInter(conteudo), banco: 'Inter' }
+}
+
+function lerExtratoInter(conteudo) {
   const linhas = String(conteudo).split(/\r?\n/)
   const iCabecalho = linhas.findIndex(l => l.startsWith(CABECALHO))
   if (iCabecalho === -1) {
     throw new ExtratoInvalido(
-      'Não reconheci esse arquivo como um extrato do Inter em CSV. Exporte de novo escolhendo CSV.'
+      'Não reconheci o formato desse arquivo. Exporte o extrato de novo, escolhendo CSV.'
     )
   }
 
@@ -135,6 +147,8 @@ function categoriaAutomatica({ historico, descricao }) {
   return null
 }
 
+const OPERACOES_DE_TRANSFERENCIA = /\b(pix|ted|doc|transfer)/i
+
 /**
  * Converte as linhas do extrato no formato de lancamentos_cc.
  *
@@ -150,7 +164,6 @@ function categoriaAutomatica({ historico, descricao }) {
  * "Pagamento Fatura - NOME DELA" e não é transferência entre contas nenhuma.
  * Por isso a operação também precisa ser de transferência (Pix, TED, DOC).
  */
-const OPERACOES_DE_TRANSFERENCIA = /\b(pix|ted|doc|transfer)/i
 export function linhasExtratoCsvParaLancamentos(linhas, { contaId, indiceCategorias, nomeTitular, sugerirCategoria }) {
   const alvo = nomeTitular?.trim().toLowerCase()
 

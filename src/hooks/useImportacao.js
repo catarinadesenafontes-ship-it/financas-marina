@@ -10,6 +10,7 @@ import {
   sugerirCategoria,
   linhasFaturaParaGastos,
   casarTransferenciasProprias,
+  marcarTransferenciasJaLancadas,
 } from '../lib/importacao'
 
 const CHAVES_PARA_INVALIDAR = [
@@ -57,7 +58,7 @@ export function useImportacao() {
       const conteudo = await lerArquivoTexto(arquivo)
       const extrato = lerExtratoCsv(conteudo)
 
-      const lancamentos = linhasExtratoCsvParaLancamentos(extrato.linhas, {
+      const lidos = linhasExtratoCsvParaLancamentos(extrato.linhas, {
         contaId,
         indiceCategorias: indice,
         nomeTitular,
@@ -102,9 +103,17 @@ export function useImportacao() {
         .gte('data', comFolga(extrato.periodo.inicio, -7))
         .lte('data', comFolga(extrato.periodo.fim, 7))
 
+      // Casar por valor e data é mais confiável que procurar o nome: o Inter
+      // escreve "Marina Fontes Moreira" e o Itaú abrevia para "PIX TRANSF
+      // MARINA 28/06". Quem casa com uma transferência já lançada fica de fora
+      // da importação, sem depender de como o banco escreveu o nome.
+      const { lancamentos } = marcarTransferenciasJaLancadas(lidos, transferenciasNoApp ?? [])
+
+      // O que o nome apontou como transferência e não casou com nada ainda não
+      // foi lançado — é o que faz o saldo fechar errado sem explicação.
       const transferencias = casarTransferenciasProprias(
-        lancamentos.filter(l => l.ehTransferenciaPropria),
-        transferenciasNoApp ?? []
+        lancamentos.filter(l => l.ehTransferenciaPropria && !l.casouComLancada),
+        []
       )
 
       return {

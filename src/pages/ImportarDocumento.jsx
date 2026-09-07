@@ -302,12 +302,25 @@ function ResumoExtrato({ dados, conta, criarSaldoInicial, onCriarSaldoInicial })
           </span>
         </div>
       ) : (
-        <div className="flex items-start gap-2 text-[11px] text-warning bg-orange-50 rounded-xl px-3 py-2.5">
-          <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
-          <span>
-            A conferência de saldo não fechou em {extrato.furos.length} ponto(s). O arquivo pode estar
-            incompleto — confira antes de importar.
-          </span>
+        <div className="text-[11px] text-warning bg-orange-50 rounded-xl px-3 py-2.5 space-y-1.5">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+            <span>
+              <strong>Esse arquivo está incompleto.</strong> O saldo declarado não bate com a soma
+              dos lançamentos — quase sempre é período errado na exportação. Exporte de novo
+              cobrindo até hoje antes de importar.
+            </span>
+          </div>
+          <ul className="pl-5">
+            {extrato.furos.slice(0, 4).map((f, i) => (
+              <li key={i}>
+                em {formatDate(f.data)} faltam <span className="font-mono">{formatCurrency(Math.abs(f.diferenca ?? 0))}</span>
+              </li>
+            ))}
+          </ul>
+          {extrato.periodoTexto && (
+            <p className="pl-5 text-text-muted">O arquivo diz cobrir: {extrato.periodoTexto}</p>
+          )}
         </div>
       )}
 
