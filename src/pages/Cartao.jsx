@@ -58,8 +58,11 @@ export function Cartao() {
         origem: form.origem,
       })
       resetModal()
+      showSuccess('Gasto salvo')
     } catch (err) {
+      // Falha silenciosa esconde lançamento perdido — o erro tem que aparecer.
       console.error(err)
+      showError(err?.message ?? 'Não consegui salvar. Tente de novo.')
     }
   }
 

@@ -64,6 +64,14 @@ export function ContaCorrente() {
 
     try {
       if (form.tipo === 'transferencia') {
+        if (!form.contaOrigemId || !form.contaDestinoId) {
+          showError('Escolha a conta de origem e a de destino.')
+          return
+        }
+        if (form.contaOrigemId === form.contaDestinoId) {
+          showError('Origem e destino precisam ser contas diferentes.')
+          return
+        }
         await add({
           tipo: 'transferencia',
           contaOrigemId: form.contaOrigemId,
@@ -87,8 +95,13 @@ export function ContaCorrente() {
         })
       }
       resetModal()
+      showSuccess('Lançamento salvo')
     } catch (err) {
+      // Antes isso ia só para o console: o lançamento falhava, o modal ficava
+      // aberto e nada explicava por quê. Foi assim que três transferências se
+      // perderam sem ninguém notar.
       console.error(err)
+      showError(err?.message ?? 'Não consegui salvar. Tente de novo.')
     }
   }
 
